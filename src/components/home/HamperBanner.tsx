@@ -8,9 +8,9 @@ export function HamperBanner() {
     <section className="bg-white px-5 pb-24 dark:bg-stone-950 sm:px-8">
       <div
         className="hamper-card relative mx-auto flex min-h-[340px] max-w-[1180px] items-center justify-center overflow-hidden rounded-[32px] bg-[#aeb7a2] bg-cover bg-center px-6 py-14 text-center shadow-[0_30px_70px_rgba(45,65,39,.16)] sm:min-h-[380px]"
-        style={{ backgroundImage: `url("${bannerImage}")` }}
         data-reveal
       >
+        <div className="hamper-parallax-bg absolute -inset-10 bg-cover bg-center" style={{ backgroundImage: `url("${bannerImage}")` }} />
         <div className="absolute inset-0 bg-[#84916d]/10 dark:bg-stone-950/20" />
         <img
           className="hamper-nuts-left pointer-events-none absolute -bottom-36 -left-9 w-[185px] select-none sm:-bottom-48 sm:w-[260px] lg:-bottom-64 lg:w-[350px]"

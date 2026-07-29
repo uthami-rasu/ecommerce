@@ -12,7 +12,7 @@ export function ImageGallery() {
   return (
     <div className="mx-auto grid max-w-[1180px] grid-cols-2 gap-3 md:auto-rows-[230px] md:grid-cols-12 md:gap-4">
       {galleryImages.map((image, index) => (
-        <div className={`gallery-tile group relative min-h-[190px] overflow-hidden rounded-[24px] ${layouts[index]}`} key={image.alt} data-reveal>
+        <div className={`gallery-tile group relative min-h-[190px] overflow-hidden rounded-[24px] ${layouts[index]}`} key={index} data-reveal>
           <img
             className="h-full w-full object-cover transition duration-700 group-hover:scale-110"
             src={image.src}

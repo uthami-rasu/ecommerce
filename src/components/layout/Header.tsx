@@ -1,14 +1,17 @@
 import {
   Heart,
+  Home,
+  Images,
   Menu,
+  MessageCircle,
   Search,
   ShoppingBag,
+  Sparkles,
   UserRound,
   X,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useEffect } from 'react'
-import { navigationLinks } from '../../constants/navigation'
 import { Brand } from '../ui/Brand'
 import { SearchPanel } from './SearchPanel'
 
@@ -23,6 +26,14 @@ const categoryLinks = [
   { label: 'Smart mixes', detail: 'Protein & energy trail mixes', icon: '⚡' },
   { label: 'Gift hampers', detail: 'Made for every celebration', icon: '🎁' },
 ]
+
+const navItems = [
+  { label: 'Home', href: '#home', icon: Home },
+  { label: 'Shop', href: '#favorites', icon: ShoppingBag, opensMenu: true },
+  { label: 'Gifting', href: '#trending', icon: Sparkles },
+  { label: 'Gallery', href: '#gallery', icon: Images },
+  { label: 'Contact', href: '#contact', icon: MessageCircle },
+] as const
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -51,31 +62,27 @@ export function Header() {
   }, [])
 
   return (
-    <header className={`sticky top-0 z-50 border-b border-[#e8e2d8]/80 bg-[#fffdf8]/90 backdrop-blur-xl transition-shadow duration-300 dark:border-stone-800 dark:bg-stone-950/90 ${isScrolled ? 'shadow-[0_10px_35px_rgba(24,50,39,.1)]' : ''}`}>
+    <header className={`site-header sticky top-0 z-50 border-b border-[#e8e2d8]/80 bg-[#fffdf8]/90 backdrop-blur-xl transition-shadow duration-300 dark:border-stone-800 dark:bg-stone-950/90 ${isScrolled ? 'shadow-[0_10px_35px_rgba(24,50,39,.1)]' : ''}`}>
       <div className={`hidden items-center justify-center overflow-hidden bg-[#173f32] px-5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#f6e9cd] transition-all sm:flex ${isScrolled ? 'h-0' : 'h-8'}`}>
         Free delivery above ₹999 <span className="mx-3 text-[#d8b36a]">•</span> Freshly packed after you order
       </div>
       <div className="mx-auto flex h-[72px] max-w-[1440px] items-center justify-between px-5 sm:px-8 lg:px-14">
         <Brand />
 
-        <nav className="hidden items-center gap-9 md:flex" aria-label="Main navigation">
-          {navigationLinks.map((link) => link.label === 'Categories' ? (
-            <button className="nav-link flex items-center gap-1 text-[13px] font-medium text-stone-700 transition hover:text-[#a3682f] dark:text-stone-300" key={link.label} type="button" onClick={() => setIsCategoriesOpen((open) => !open)} aria-expanded={isCategoriesOpen}>
-              Categories <span className={`text-[9px] transition ${isCategoriesOpen ? 'rotate-180' : ''}`}>▼</span>
+        <nav className="hidden items-center gap-1 md:flex" aria-label="Main navigation">
+          {navItems.map(({ label, href, icon: Icon, ...item }) => 'opensMenu' in item && item.opensMenu ? (
+            <button className={`nav-icon-link group ${isCategoriesOpen ? 'is-active' : ''}`} key={label} type="button" onClick={() => setIsCategoriesOpen((open) => !open)} aria-expanded={isCategoriesOpen}>
+              <Icon size={15} strokeWidth={1.8} /><span>{label}</span><span className={`text-[8px] transition ${isCategoriesOpen ? 'rotate-180' : ''}`}>▼</span>
             </button>
           ) : (
-            <a
-              className="nav-link text-[13px] font-medium text-stone-700 transition hover:text-[#a3682f] dark:text-stone-300 dark:hover:text-amber-300"
-              href={link.href}
-              key={link.label}
-            >
-              {link.label}
+            <a className="nav-icon-link group" href={href} key={label}>
+              <Icon size={15} strokeWidth={1.8} /><span>{label}</span>
             </a>
           ))}
         </nav>
 
         <div className="flex items-center gap-0.5 sm:gap-1">
-          <button className="icon-button sm:hidden" aria-label="Search" type="button" onClick={() => setIsSearchOpen(true)}><Search size={18} /></button>
+          <button className="icon-button mobile-only" aria-label="Search" type="button" onClick={() => setIsSearchOpen(true)}><Search size={18} /></button>
           <div className="hidden items-center sm:flex">
             <button className="icon-button group relative" aria-label="Search" type="button" onClick={() => setIsSearchOpen(true)}>
               <Search className="transition group-hover:rotate-[-8deg] group-hover:scale-110" size={18} />
@@ -94,7 +101,7 @@ export function Header() {
             </span>
           </button>
           <button
-            className="icon-button md:hidden"
+            className="icon-button mobile-only"
             aria-label="Toggle menu"
             aria-expanded={isMenuOpen}
             onClick={() => setIsMenuOpen((isOpen) => !isOpen)}
@@ -118,14 +125,14 @@ export function Header() {
       )}
       {isMenuOpen && (
         <nav className="border-t border-stone-100 bg-white px-5 py-4 shadow-lg dark:border-stone-800 dark:bg-stone-950 md:hidden" aria-label="Mobile navigation">
-          {navigationLinks.map((link) => (
+          {navItems.map(({ label, href, icon: Icon }) => (
             <a
-              className="block rounded-xl px-4 py-3 text-sm font-medium text-stone-700 hover:bg-stone-50 dark:text-stone-200 dark:hover:bg-stone-900"
-              href={link.href}
-              key={link.label}
+              className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-stone-700 hover:bg-stone-50 dark:text-stone-200 dark:hover:bg-stone-900"
+              href={href}
+              key={label}
               onClick={() => setIsMenuOpen(false)}
             >
-              {link.label}
+              <Icon size={17} /> {label}
             </a>
           ))}
         </nav>
