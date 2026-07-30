@@ -471,65 +471,88 @@ input {
 .honey-ambient-two span:nth-child(1) { right: 0; bottom: 0; }
 .honey-ambient-two span:nth-child(2) { left: -55px; top: -75px; }
 
-.flying-bee {
-  position: absolute;
-  z-index: 12;
-  left: 7%;
-  top: 16%;
-  width: 30px;
-  height: 26px;
+.nature-scene {
   pointer-events: none;
-  filter: drop-shadow(0 5px 5px rgba(79, 52, 10, .18));
-  animation: bee-flight 15s cubic-bezier(.45,.05,.55,.95) infinite;
+}
+
+.nature-bee,
+.nature-butterfly,
+.nature-plant {
+  position: absolute;
+  height: auto;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
   will-change: transform;
 }
 
-.bee-body {
-  position: absolute;
-  left: 5px;
-  top: 8px;
-  width: 23px;
-  height: 14px;
-  border-radius: 60% 45% 55% 50%;
-  background: repeating-linear-gradient(90deg, #f4c544 0 5px, #332a1e 5px 8px);
-  transform: rotate(8deg);
+.nature-bee {
+  z-index: 12;
+  width: 72px;
+  filter: drop-shadow(0 8px 8px rgba(73, 48, 9, .2));
 }
 
-.bee-body::before {
-  content: "";
-  position: absolute;
-  left: -5px;
-  top: 3px;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: #332a1e;
+.bee-orbit-honey {
+  left: 50%;
+  top: 51%;
+  animation: bee-orbit-honey 13s linear infinite;
 }
 
-.bee-body::after {
-  content: "";
-  position: absolute;
-  right: -5px;
-  top: 5px;
-  border-left: 6px solid #332a1e;
-  border-top: 2px solid transparent;
-  border-bottom: 2px solid transparent;
+.bee-roam-one {
+  left: 7%;
+  top: 25%;
+  width: 48px;
+  opacity: .88;
+  animation: bee-roam-one 19s linear infinite;
 }
 
-.bee-wing {
-  position: absolute;
-  top: -8px;
-  width: 13px;
-  height: 10px;
-  border: 1px solid rgba(91, 111, 104, .28);
-  border-radius: 70% 35% 65% 35%;
-  background: rgba(255,255,255,.75);
-  transform-origin: bottom center;
-  animation: bee-wing-flap 140ms ease-in-out infinite alternate;
+.bee-roam-two {
+  right: 8%;
+  top: 30%;
+  width: 42px;
+  opacity: .78;
+  animation: bee-roam-two 22s linear infinite -8s;
 }
 
-.bee-wing-left { left: 1px; transform: rotate(-24deg); }
-.bee-wing-right { right: 1px; transform: rotate(24deg); animation-delay: -70ms; }
+.nature-butterfly {
+  z-index: 11;
+  width: 60px;
+  filter: drop-shadow(0 7px 8px rgba(90, 57, 20, .14));
+}
+
+.butterfly-roam-one {
+  left: 13%;
+  top: 52%;
+  animation: butterfly-roam-one 24s linear infinite -6s;
+}
+
+.butterfly-roam-two {
+  right: 16%;
+  top: 14%;
+  width: 42px;
+  opacity: .72;
+  animation: butterfly-roam-two 20s linear infinite -12s;
+}
+
+.nature-plant {
+  z-index: 0;
+  bottom: -3rem;
+  width: min(32vw, 430px);
+  opacity: .43;
+  transform-origin: bottom left;
+  filter: saturate(.78);
+}
+
+.nature-plant-left {
+  left: -5rem;
+  animation: plant-sway-left 7s ease-in-out infinite;
+}
+
+.nature-plant-right {
+  right: -5rem;
+  transform-origin: bottom right;
+  animation: plant-sway-right 8s ease-in-out infinite -3s;
+}
 
 .honey-fact {
   min-height: 190px;
@@ -787,17 +810,49 @@ input {
   50% { transform: translate3d(10px, -18px, 0) rotate(22deg); }
 }
 
-@keyframes bee-flight {
-  0%, 100% { transform: translate3d(0, 0, 0) rotate(-8deg); }
-  20% { transform: translate3d(20vw, -35px, 0) rotate(8deg); }
-  42% { transform: translate3d(43vw, 24px, 0) rotate(-4deg); }
-  64% { transform: translate3d(68vw, 72px, 0) rotate(10deg); }
-  82% { transform: translate3d(38vw, 115px, 0) rotate(-9deg); }
+@keyframes bee-orbit-honey {
+  0%, 100% { transform: translate3d(-255px, -20px, 0) rotate(-18deg) scale(.82); }
+  25% { transform: translate3d(-70px, -185px, 0) rotate(35deg) scale(1); }
+  50% { transform: translate3d(185px, -22px, 0) rotate(132deg) scale(.9); }
+  75% { transform: translate3d(15px, 185px, 0) rotate(218deg) scale(.76); }
 }
 
-@keyframes bee-wing-flap {
-  from { scale: 1 .35; opacity: .55; }
-  to { scale: 1 1; opacity: .9; }
+@keyframes bee-roam-one {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-12deg) scale(.78); }
+  22% { transform: translate3d(26vw, -55px, 0) rotate(18deg) scale(1); }
+  48% { transform: translate3d(64vw, 90px, 0) rotate(72deg) scale(.88); }
+  72% { transform: translate3d(42vw, 390px, 0) rotate(166deg) scale(.7); }
+  88% { transform: translate3d(8vw, 260px, 0) rotate(238deg) scale(.72); }
+}
+
+@keyframes bee-roam-two {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(168deg) scale(.7); }
+  28% { transform: translate3d(-28vw, 105px, 0) rotate(205deg) scale(.88); }
+  52% { transform: translate3d(-58vw, 20px, 0) rotate(258deg) scale(.75); }
+  76% { transform: translate3d(-34vw, -120px, 0) rotate(338deg) scale(.92); }
+}
+
+@keyframes butterfly-roam-one {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-12deg) scale(.72, .9); }
+  25% { transform: translate3d(20vw, -100px, 0) rotate(26deg) scale(.95, .66); }
+  50% { transform: translate3d(56vw, 10px, 0) rotate(105deg) scale(.8, 1); }
+  75% { transform: translate3d(32vw, 190px, 0) rotate(214deg) scale(.68, .82); }
+}
+
+@keyframes butterfly-roam-two {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(150deg) scale(.7, .95); }
+  32% { transform: translate3d(-22vw, 140px, 0) rotate(205deg) scale(.9, .65); }
+  66% { transform: translate3d(-46vw, -10px, 0) rotate(300deg) scale(.74, 1); }
+}
+
+@keyframes plant-sway-left {
+  0%, 100% { transform: rotate(-2deg) translate3d(0, 0, 0); }
+  50% { transform: rotate(2.5deg) translate3d(8px, -3px, 0); }
+}
+
+@keyframes plant-sway-right {
+  0%, 100% { transform: scaleX(-1) rotate(-2deg) translate3d(0, 0, 0); }
+  50% { transform: scaleX(-1) rotate(2.5deg) translate3d(-8px, -3px, 0); }
 }
 
 
@@ -850,7 +905,7 @@ input {
     transform: none !important;
   }
 
-  .flying-bee {
+  .nature-scene {
     display: none;
   }
 }

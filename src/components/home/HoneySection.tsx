@@ -7,6 +7,9 @@ import { ActionLink } from '../ui/ActionLink'
 import { HoneyBenefitColumn } from './HoneyBenefitColumn'
 import { useRef } from 'react'
 import { useSectionParallax } from '../../hooks/useSectionParallax'
+import beeImage from '../../assets/images/nature-bee-3d.png'
+import butterflyImage from '../../assets/images/nature-butterfly-3d.png'
+import botanicalImage from '../../assets/images/nature-botanical-3d.png'
 
 export function HoneySection() {
   const sectionRef = useRef<HTMLElement>(null)
@@ -21,8 +24,14 @@ export function HoneySection() {
       <div className="honey-depth-panel honey-stage relative isolate overflow-hidden bg-white px-5 pb-20 pt-7 shadow-[0_-28px_70px_rgba(40,54,44,.14)] dark:bg-stone-950 sm:px-8 sm:pt-9 lg:pb-24">
       <div className="honey-parallax-glow absolute left-1/2 top-1/2 -z-10 size-[620px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#fff2c9] blur-3xl dark:bg-amber-900/10" />
       <div className="honeycomb-pattern absolute inset-0 -z-10 opacity-30" />
-      <div className="flying-bee" aria-hidden="true">
-        <span className="bee-body"><i className="bee-wing bee-wing-left" /><i className="bee-wing bee-wing-right" /></span>
+      <div className="nature-scene absolute inset-0 overflow-hidden" aria-hidden="true">
+        <img className="nature-plant nature-plant-left" src={botanicalImage} alt="" loading="lazy" decoding="async" />
+        <img className="nature-plant nature-plant-right" src={botanicalImage} alt="" loading="lazy" decoding="async" />
+        <img className="nature-bee bee-orbit-honey" src={beeImage} alt="" loading="lazy" decoding="async" />
+        <img className="nature-bee bee-roam-one" src={beeImage} alt="" loading="lazy" decoding="async" />
+        <img className="nature-bee bee-roam-two" src={beeImage} alt="" loading="lazy" decoding="async" />
+        <img className="nature-butterfly butterfly-roam-one" src={butterflyImage} alt="" loading="lazy" decoding="async" />
+        <img className="nature-butterfly butterfly-roam-two" src={butterflyImage} alt="" loading="lazy" decoding="async" />
       </div>
       <div className="honey-ambient honey-ambient-one" aria-hidden="true"><span /><span /><span /></div>
       <div className="honey-ambient honey-ambient-two" aria-hidden="true"><span /><span /></div>
