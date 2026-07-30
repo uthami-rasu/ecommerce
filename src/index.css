@@ -129,107 +129,188 @@ input {
   filter: drop-shadow(0 8px 18px rgba(196, 137, 38, .12));
 }
 
+/* Popular-products ribbon: a dark jewel band that anchors the section,
+   lit with warm gold and echoing the editor's-pick card below it. */
 .product-ticker {
-  overflow: hidden;
   position: relative;
-  padding-block: 2rem;
+  isolation: isolate;
+  overflow: hidden;
+  padding-block: 2.4rem;
   background:
-    linear-gradient(90deg, rgba(242,232,213,.96), rgba(250,247,239,.98) 45%, rgba(226,237,226,.96));
-  border-block: 1px solid rgba(150, 117, 70, .16);
-  mask-image: linear-gradient(90deg, transparent, black 4%, black 96%, transparent);
-  -webkit-mask-image: linear-gradient(90deg, transparent, black 4%, black 96%, transparent);
+    radial-gradient(85% 150% at 14% -35%, rgba(214,160,82,.32), transparent 58%),
+    radial-gradient(75% 145% at 86% 135%, rgba(86,142,114,.34), transparent 62%),
+    linear-gradient(180deg, rgba(255,255,255,.05), transparent 38%, rgba(4,14,10,.30)),
+    linear-gradient(102deg, #0d251c 0%, #163d2d 47%, #0f2b21 100%);
+  border-block: 1px solid rgba(233,199,138,.20);
+  box-shadow:
+    inset 0 1px 0 rgba(255,240,211,.10),
+    inset 0 -1px 0 rgba(255,240,211,.06),
+    inset 90px 0 70px -70px rgba(4,14,10,.75),
+    inset -90px 0 70px -70px rgba(4,14,10,.75),
+    0 24px 60px -40px rgba(11,32,24,.9);
 }
 
-.product-ticker::before,
-.product-ticker::after {
+/* Sheen across the whole band so it reads as one lit surface, not a flat fill. */
+.product-ticker::before {
   content: "";
   position: absolute;
+  inset: -40% -10% auto;
+  height: 150%;
   z-index: 0;
-  width: 22rem;
-  height: 22rem;
-  border-radius: 999px;
-  filter: blur(70px);
-  opacity: .32;
+  background: linear-gradient(96deg, transparent 18%, rgba(255,244,220,.07) 48%, transparent 74%);
   pointer-events: none;
 }
 
-.product-ticker::before {
-  left: 18%;
-  top: -18rem;
-  background: #e0ad59;
+.ticker-grain {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: .5;
+  mix-blend-mode: soft-light;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.42'/%3E%3C/svg%3E");
 }
 
-.product-ticker::after {
-  right: 12%;
-  bottom: -18rem;
-  background: #5f9279;
-}
-
+/* Gold hairlines just inside the band edges. */
 .scroller-glow {
   position: absolute;
-  z-index: 0;
+  z-index: 1;
   height: 1px;
   width: 100%;
-  background: linear-gradient(90deg, transparent, rgba(179,128,61,.25), transparent);
+  background: linear-gradient(90deg, transparent, rgba(233,199,138,.42) 20%, rgba(255,241,213,.72) 50%, rgba(233,199,138,.42) 80%, transparent);
+  pointer-events: none;
 }
 
-.scroller-glow-one { top: 1rem; }
-.scroller-glow-two { bottom: 1rem; }
+.scroller-glow-one { top: .9rem; }
+.scroller-glow-two { bottom: .9rem; }
+
+/* The mask lives on the static viewport — putting it on the animated track
+   would drag the fade along with the scroll. */
+.product-ticker-viewport {
+  position: relative;
+  z-index: 2;
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, black 7%, black 93%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, black 7%, black 93%, transparent);
+}
 
 .ticker-product {
   position: relative;
-  min-width: 285px;
+  min-width: 288px;
   padding: 0;
   border: 0;
   background: transparent;
-  color: #173f32;
-  opacity: var(--marquee-opacity, .85);
-  transform: translate3d(0, var(--marquee-y, 0px), 0) perspective(850px) rotateY(var(--marquee-rotate, 0deg)) scale(var(--marquee-scale, .9));
+  opacity: var(--marquee-opacity, .9);
+  transform: perspective(1100px) rotateY(var(--marquee-rotate, 0deg)) scale(var(--marquee-scale, .95));
   transform-style: preserve-3d;
   transition: opacity 160ms linear, transform 160ms linear;
   will-change: transform, opacity;
 }
 
 .ticker-card-surface {
-  min-height: 96px;
-  padding: .75rem 1rem .75rem .75rem;
-  border: 1px solid rgba(255,255,255,.72);
-  border-radius: 26px 26px 26px 8px;
-  background: linear-gradient(135deg, rgba(255,255,255,.74), rgba(255,255,255,.42));
-  box-shadow: 0 18px 44px rgba(62, 50, 32, .1), inset 0 1px 0 rgba(255,255,255,.8);
-  backdrop-filter: blur(18px) saturate(125%);
-  -webkit-backdrop-filter: blur(18px) saturate(125%);
-  transition: transform 380ms cubic-bezier(.2,.75,.25,1), box-shadow 380ms, background-color 380ms;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  overflow: hidden;
+  min-height: 92px;
+  padding: .8rem 1.05rem .8rem .8rem;
+  border: 1px solid rgba(240,208,148,.26);
+  border-radius: 22px;
+  background:
+    linear-gradient(150deg, rgba(255,250,240,.19), rgba(255,250,240,.075) 46%, rgba(255,250,240,.03)),
+    linear-gradient(180deg, rgba(31,72,55,.55), rgba(9,26,20,.55));
+  box-shadow:
+    0 24px 44px -22px rgba(0,0,0,.85),
+    inset 0 1px 0 rgba(255,246,228,.26),
+    0 0 0 1px rgba(240,205,140, calc(var(--marquee-focus, 0) * .22)),
+    0 0 42px -10px rgba(226,178,101, calc(var(--marquee-focus, 0) * .3));
+  backdrop-filter: blur(14px) saturate(135%);
+  -webkit-backdrop-filter: blur(14px) saturate(135%);
+  transition: transform 420ms cubic-bezier(.2,.75,.25,1), box-shadow 420ms, border-color 420ms;
+}
+
+/* Light sweeps across the card on hover. */
+.ticker-card-surface::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -70%;
+  width: 45%;
+  height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(255,241,214,.20), transparent);
+  transform: skewX(-18deg);
+  transition: left 820ms cubic-bezier(.3,.7,.3,1);
+  pointer-events: none;
 }
 
 .ticker-product:hover .ticker-card-surface {
   z-index: 3;
-  transform: translateY(-6px) scale(1.025);
-  background: linear-gradient(135deg, rgba(255,255,255,.94), rgba(255,255,255,.66));
-  box-shadow: 0 26px 55px rgba(62, 50, 32, .16), inset 0 1px 0 #fff;
+  transform: translateY(-5px);
+  border-color: rgba(240,208,148,.42);
+  box-shadow:
+    0 30px 55px -22px rgba(0,0,0,.82),
+    inset 0 1px 0 rgba(255,248,232,.24),
+    0 0 0 1px rgba(240,205,140,.26),
+    0 0 52px -12px rgba(230,180,98,.42);
 }
 
+.ticker-product:hover .ticker-card-surface::after {
+  left: 125%;
+}
+
+.ticker-product:focus-visible {
+  outline: none;
+}
+
+.ticker-product:focus-visible .ticker-card-surface {
+  border-color: rgba(240,208,148,.7);
+}
+
+/* Product photos arrive on mixed backgrounds, so every thumbnail gets the
+   same lit plate + rim + vignette to make the row read as one set. */
 .ticker-image {
-  border-radius: 19px 19px 19px 6px;
-  background: #eee3cf;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.55);
+  position: relative;
+  border-radius: 16px;
+  background: linear-gradient(155deg, #23543f, #0d2419);
+  box-shadow:
+    inset 0 0 0 1px rgba(240,214,166,.24),
+    0 10px 20px -10px rgba(0,0,0,.8);
 }
 
-.ticker-product:nth-child(even) {
-  --marquee-y: 6px;
+.ticker-image::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(120% 85% at 50% 8%, rgba(255,240,214,.16), transparent 62%);
+  box-shadow: inset 0 -10px 16px -10px rgba(0,0,0,.7);
+  pointer-events: none;
 }
 
-.ticker-product:nth-child(even) .ticker-card-surface {
-  border-radius: 26px 8px 26px 26px;
-  background: linear-gradient(135deg, rgba(238,247,233,.78), rgba(226,239,224,.46));
+.ticker-rule {
+  width: 12px;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(233,199,138,.7), rgba(233,199,138,.15));
 }
 
-.ticker-product:nth-child(3n) .ticker-card-surface {
-  background: linear-gradient(135deg, rgba(255,246,222,.84), rgba(249,230,190,.48));
+.ticker-arrow {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid rgba(233,199,138,.3);
+  background: rgba(255,250,240,.05);
+  color: #ecc98d;
+  transition: transform 420ms cubic-bezier(.2,.75,.25,1), background 420ms, color 420ms, border-color 420ms;
 }
 
-.ticker-product:nth-child(even) .ticker-image {
-  border-radius: 19px 6px 19px 19px;
+.ticker-product:hover .ticker-arrow {
+  transform: rotate(45deg) scale(1.08);
+  border-color: transparent;
+  background: linear-gradient(140deg, #f0d19a, #c99a4f);
+  color: #11301f;
 }
 
 .product-ticker-track {
@@ -475,10 +556,37 @@ input {
   pointer-events: none;
 }
 
-.nature-bee,
-.nature-butterfly,
-.nature-plant {
+/* Flight rig: one animation per layer so travel, facing, pitch and wingbeat never fight.
+   The three outer layers share duration/delay, so their keyframe percentages stay in sync. */
+.nature-flyer {
   position: absolute;
+  width: var(--flyer-size, 64px);
+  animation-name: var(--flight-path);
+}
+
+.nature-flyer-heading {
+  animation-name: var(--flight-heading);
+}
+
+.nature-flyer-pitch {
+  animation-name: var(--flight-pitch);
+}
+
+.nature-flyer,
+.nature-flyer-heading,
+.nature-flyer-pitch {
+  animation-duration: var(--flight-duration);
+  animation-delay: var(--flight-delay, 0s);
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  animation-fill-mode: both;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.nature-flyer-body {
+  display: block;
+  width: 100%;
   height: auto;
   object-fit: contain;
   pointer-events: none;
@@ -486,55 +594,85 @@ input {
   will-change: transform;
 }
 
-.nature-bee {
-  z-index: 12;
-  width: 72px;
+/* Sprites face right / head-up, so "forward" is +x in the body's own frame. */
+.nature-flyer-bee {
   filter: drop-shadow(0 8px 8px rgba(73, 48, 9, .2));
+  animation: bee-wingbeat .22s ease-in-out infinite;
 }
 
-.bee-orbit-honey {
+.nature-flyer-butterfly {
+  filter: drop-shadow(0 7px 8px rgba(90, 57, 20, .14));
+  animation: butterfly-wingbeat .58s ease-in-out infinite;
+}
+
+.flight-bee-orbit {
   left: 50%;
   top: 51%;
-  animation: bee-orbit-honey 13s linear infinite;
+  z-index: 12;
+  --flyer-size: 72px;
+  --flight-duration: 16s;
+  --flight-path: bee-orbit-path;
+  --flight-heading: bee-orbit-heading;
+  --flight-pitch: bee-orbit-pitch;
 }
 
-.bee-roam-one {
+.flight-bee-left {
   left: 7%;
-  top: 25%;
-  width: 48px;
+  top: 22%;
+  z-index: 12;
   opacity: .88;
-  animation: bee-roam-one 19s linear infinite;
+  --flyer-size: 48px;
+  --flight-duration: 24s;
+  --flight-path: bee-left-path;
+  --flight-heading: bee-left-heading;
+  --flight-pitch: bee-left-pitch;
 }
 
-.bee-roam-two {
+.flight-bee-right {
   right: 8%;
   top: 30%;
-  width: 42px;
-  opacity: .78;
-  animation: bee-roam-two 22s linear infinite -8s;
+  z-index: 12;
+  opacity: .8;
+  --flyer-size: 42px;
+  --flight-duration: 27s;
+  --flight-delay: -9s;
+  --flight-path: bee-right-path;
+  --flight-heading: bee-right-heading;
+  --flight-pitch: bee-right-pitch;
 }
 
-.nature-butterfly {
-  z-index: 11;
-  width: 60px;
-  filter: drop-shadow(0 7px 8px rgba(90, 57, 20, .14));
-}
-
-.butterfly-roam-one {
+.flight-butterfly-left {
   left: 13%;
-  top: 52%;
-  animation: butterfly-roam-one 24s linear infinite -6s;
+  top: 54%;
+  z-index: 11;
+  --flyer-size: 58px;
+  --flight-duration: 26s;
+  --flight-delay: -6s;
+  --flight-path: butterfly-left-path;
+  --flight-heading: butterfly-left-heading;
+  --flight-pitch: butterfly-left-pitch;
 }
 
-.butterfly-roam-two {
+.flight-butterfly-right {
   right: 16%;
-  top: 14%;
-  width: 42px;
-  opacity: .72;
-  animation: butterfly-roam-two 20s linear infinite -12s;
+  top: 15%;
+  z-index: 11;
+  opacity: .78;
+  --flyer-size: 44px;
+  --flight-duration: 22s;
+  --flight-delay: -11s;
+  --flight-path: butterfly-right-path;
+  --flight-heading: butterfly-right-heading;
+  --flight-pitch: butterfly-right-pitch;
 }
 
 .nature-plant {
+  position: absolute;
+  height: auto;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  will-change: transform;
   z-index: 0;
   bottom: -3rem;
   width: min(32vw, 430px);
@@ -780,9 +918,11 @@ input {
   to { transform: translateX(-50%); }
 }
 
+/* The track holds the list twice and the trailing gap equals the inter-card gap,
+   so -50% lands exactly on the duplicate: a seamless loop with no jump. */
 @keyframes product-scroll {
   from { transform: translateX(0); }
-  to { transform: translateX(calc(-50% - 10px)); }
+  to { transform: translateX(-50%); }
 }
 
 @keyframes spotlight-enter {
@@ -810,39 +950,149 @@ input {
   50% { transform: translate3d(10px, -18px, 0) rotate(22deg); }
 }
 
-@keyframes bee-orbit-honey {
-  0%, 100% { transform: translate3d(-255px, -20px, 0) rotate(-18deg) scale(.82); }
-  25% { transform: translate3d(-70px, -185px, 0) rotate(35deg) scale(1); }
-  50% { transform: translate3d(185px, -22px, 0) rotate(132deg) scale(.9); }
-  75% { transform: translate3d(15px, 185px, 0) rotate(218deg) scale(.76); }
+/* Wingbeat: bees buzz in place, butterflies fold their wings (scaleX) and bob with each stroke. */
+@keyframes bee-wingbeat {
+  0%, 100% { transform: translate3d(0, 0, 0) scaleY(1); }
+  50% { transform: translate3d(0, -2px, 0) scaleY(.97); }
 }
 
-@keyframes bee-roam-one {
-  0%, 100% { transform: translate3d(0, 0, 0) rotate(-12deg) scale(.78); }
-  22% { transform: translate3d(26vw, -55px, 0) rotate(18deg) scale(1); }
-  48% { transform: translate3d(64vw, 90px, 0) rotate(72deg) scale(.88); }
-  72% { transform: translate3d(42vw, 390px, 0) rotate(166deg) scale(.7); }
-  88% { transform: translate3d(8vw, 260px, 0) rotate(238deg) scale(.72); }
+@keyframes butterfly-wingbeat {
+  0%, 100% { transform: translate3d(0, 4px, 0) scaleX(1); }
+  50% { transform: translate3d(0, -6px, 0) scaleX(.5); }
 }
 
-@keyframes bee-roam-two {
-  0%, 100% { transform: translate3d(0, 0, 0) rotate(168deg) scale(.7); }
-  28% { transform: translate3d(-28vw, 105px, 0) rotate(205deg) scale(.88); }
-  52% { transform: translate3d(-58vw, 20px, 0) rotate(258deg) scale(.75); }
-  76% { transform: translate3d(-34vw, -120px, 0) rotate(338deg) scale(.92); }
+/* Bee 1 — steady ellipse around the jar: near side reads larger, far side smaller.
+   It faces left across the back, pivots at each extreme, faces right across the front. */
+@keyframes bee-orbit-path {
+  0%, 100% { transform: translate3d(0, -105px, 0); }
+  12.5% { transform: translate3d(-141px, -74px, 0); }
+  25% { transform: translate3d(-200px, 0, 0); }
+  37.5% { transform: translate3d(-141px, 74px, 0); }
+  50% { transform: translate3d(0, 105px, 0); }
+  62.5% { transform: translate3d(141px, 74px, 0); }
+  75% { transform: translate3d(200px, 0, 0); }
+  87.5% { transform: translate3d(141px, -74px, 0); }
 }
 
-@keyframes butterfly-roam-one {
-  0%, 100% { transform: translate3d(0, 0, 0) rotate(-12deg) scale(.72, .9); }
-  25% { transform: translate3d(20vw, -100px, 0) rotate(26deg) scale(.95, .66); }
-  50% { transform: translate3d(56vw, 10px, 0) rotate(105deg) scale(.8, 1); }
-  75% { transform: translate3d(32vw, 190px, 0) rotate(214deg) scale(.68, .82); }
+@keyframes bee-orbit-heading {
+  0%, 22% { transform: scaleX(-1); }
+  28%, 72% { transform: scaleX(1); }
+  78%, 100% { transform: scaleX(-1); }
 }
 
-@keyframes butterfly-roam-two {
-  0%, 100% { transform: translate3d(0, 0, 0) rotate(150deg) scale(.7, .95); }
-  32% { transform: translate3d(-22vw, 140px, 0) rotate(205deg) scale(.9, .65); }
-  66% { transform: translate3d(-46vw, -10px, 0) rotate(300deg) scale(.74, 1); }
+@keyframes bee-orbit-pitch {
+  0%, 100% { transform: rotate(0deg) scale(.72); }
+  12.5% { transform: rotate(8deg) scale(.78); }
+  25% { transform: rotate(11deg) scale(.9); }
+  37.5% { transform: rotate(6deg) scale(1); }
+  50% { transform: rotate(0deg) scale(1.05); }
+  62.5% { transform: rotate(-6deg) scale(1); }
+  75% { transform: rotate(-11deg) scale(.9); }
+  87.5% { transform: rotate(-7deg) scale(.78); }
+}
+
+/* Bee 2 — dart, hover, pivot, dart. Turns only happen while hovering, never mid-flight. */
+@keyframes bee-left-path {
+  0%, 5% { transform: translate3d(0, 0, 0); animation-timing-function: cubic-bezier(.45, 0, .3, 1); }
+  20%, 25% { transform: translate3d(17vw, 86px, 0); animation-timing-function: cubic-bezier(.45, 0, .3, 1); }
+  38%, 45% { transform: translate3d(29vw, -26px, 0); animation-timing-function: cubic-bezier(.45, 0, .3, 1); }
+  60%, 66% { transform: translate3d(13vw, 250px, 0); animation-timing-function: cubic-bezier(.45, 0, .3, 1); }
+  80%, 86% { transform: translate3d(4vw, 168px, 0); animation-timing-function: cubic-bezier(.45, 0, .3, 1); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+
+@keyframes bee-left-heading {
+  0% { transform: scaleX(-1); }
+  5%, 38% { transform: scaleX(1); }
+  45%, 100% { transform: scaleX(-1); }
+}
+
+@keyframes bee-left-pitch {
+  0%, 5% { transform: rotate(0deg) scale(.8); }
+  12% { transform: rotate(12deg) scale(.88); }
+  20%, 25% { transform: rotate(0deg) scale(.95); }
+  32% { transform: rotate(-10deg) scale(.86); }
+  38%, 45% { transform: rotate(0deg) scale(.78); }
+  53% { transform: rotate(14deg) scale(.9); }
+  60%, 66% { transform: rotate(0deg) scale(1); }
+  73% { transform: rotate(-8deg) scale(.94); }
+  80%, 86% { transform: rotate(0deg) scale(.88); }
+  93% { transform: rotate(-12deg) scale(.84); }
+  100% { transform: rotate(0deg) scale(.8); }
+}
+
+/* Bee 3 — same rig on the right edge (anchored with `right`, so -x moves inward). */
+@keyframes bee-right-path {
+  0%, 6% { transform: translate3d(0, 0, 0); animation-timing-function: cubic-bezier(.45, 0, .3, 1); }
+  22%, 28% { transform: translate3d(-14vw, 120px, 0); animation-timing-function: cubic-bezier(.45, 0, .3, 1); }
+  44%, 51% { transform: translate3d(-26vw, 40px, 0); animation-timing-function: cubic-bezier(.45, 0, .3, 1); }
+  68%, 74% { transform: translate3d(-11vw, -58px, 0); animation-timing-function: cubic-bezier(.45, 0, .3, 1); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+
+@keyframes bee-right-heading {
+  0% { transform: scaleX(1); }
+  6%, 44% { transform: scaleX(-1); }
+  51%, 100% { transform: scaleX(1); }
+}
+
+@keyframes bee-right-pitch {
+  0%, 6% { transform: rotate(0deg) scale(.8); }
+  14% { transform: rotate(11deg) scale(.88); }
+  22%, 28% { transform: rotate(0deg) scale(.95); }
+  36% { transform: rotate(-9deg) scale(.84); }
+  44%, 51% { transform: rotate(0deg) scale(.72); }
+  60% { transform: rotate(-12deg) scale(.8); }
+  68%, 74% { transform: rotate(0deg) scale(.88); }
+  87% { transform: rotate(8deg) scale(.84); }
+  100% { transform: rotate(0deg) scale(.8); }
+}
+
+/* Butterflies — slow, continuous meander with no hard stops; they bank into the
+   direction of travel instead of flipping, and never tip past upright. */
+@keyframes butterfly-left-path {
+  0%, 100% { transform: translate3d(0, 0, 0); animation-timing-function: cubic-bezier(.4, 0, .5, 1); }
+  25% { transform: translate3d(12vw, -74px, 0); animation-timing-function: cubic-bezier(.4, 0, .5, 1); }
+  50% { transform: translate3d(24vw, -8px, 0); animation-timing-function: cubic-bezier(.4, 0, .5, 1); }
+  75% { transform: translate3d(14vw, 112px, 0); animation-timing-function: cubic-bezier(.4, 0, .5, 1); }
+  90% { transform: translate3d(3vw, 62px, 0); animation-timing-function: cubic-bezier(.4, 0, .5, 1); }
+}
+
+@keyframes butterfly-left-heading {
+  0% { transform: rotate(0deg); }
+  15%, 42% { transform: rotate(13deg); }
+  58% { transform: rotate(0deg); }
+  70%, 92% { transform: rotate(-13deg); }
+  100% { transform: rotate(0deg); }
+}
+
+@keyframes butterfly-left-pitch {
+  0%, 100% { transform: rotate(0deg) scale(.86); }
+  25% { transform: rotate(-5deg) scale(.78); }
+  50% { transform: rotate(0deg) scale(.92); }
+  75% { transform: rotate(5deg) scale(1); }
+}
+
+@keyframes butterfly-right-path {
+  0%, 100% { transform: translate3d(0, 0, 0); animation-timing-function: cubic-bezier(.4, 0, .5, 1); }
+  30% { transform: translate3d(-13vw, 96px, 0); animation-timing-function: cubic-bezier(.4, 0, .5, 1); }
+  55% { transform: translate3d(-22vw, 24px, 0); animation-timing-function: cubic-bezier(.4, 0, .5, 1); }
+  80% { transform: translate3d(-9vw, -46px, 0); animation-timing-function: cubic-bezier(.4, 0, .5, 1); }
+}
+
+@keyframes butterfly-right-heading {
+  0% { transform: rotate(0deg); }
+  18%, 48% { transform: rotate(-12deg); }
+  62% { transform: rotate(0deg); }
+  72%, 92% { transform: rotate(12deg); }
+  100% { transform: rotate(0deg); }
+}
+
+@keyframes butterfly-right-pitch {
+  0%, 100% { transform: rotate(0deg) scale(.84); }
+  30% { transform: rotate(4deg) scale(.94); }
+  55% { transform: rotate(0deg) scale(.76); }
+  80% { transform: rotate(-4deg) scale(.9); }
 }
 
 @keyframes plant-sway-left {

@@ -5,6 +5,7 @@ import {
 } from '../../constants/honeyBenefits'
 import { ActionLink } from '../ui/ActionLink'
 import { HoneyBenefitColumn } from './HoneyBenefitColumn'
+import { NatureFlyer } from './NatureFlyer'
 import { useRef } from 'react'
 import { useSectionParallax } from '../../hooks/useSectionParallax'
 import beeImage from '../../assets/images/nature-bee-3d.png'
@@ -27,11 +28,11 @@ export function HoneySection() {
       <div className="nature-scene absolute inset-0 overflow-hidden" aria-hidden="true">
         <img className="nature-plant nature-plant-left" src={botanicalImage} alt="" loading="lazy" decoding="async" />
         <img className="nature-plant nature-plant-right" src={botanicalImage} alt="" loading="lazy" decoding="async" />
-        <img className="nature-bee bee-orbit-honey" src={beeImage} alt="" loading="lazy" decoding="async" />
-        <img className="nature-bee bee-roam-one" src={beeImage} alt="" loading="lazy" decoding="async" />
-        <img className="nature-bee bee-roam-two" src={beeImage} alt="" loading="lazy" decoding="async" />
-        <img className="nature-butterfly butterfly-roam-one" src={butterflyImage} alt="" loading="lazy" decoding="async" />
-        <img className="nature-butterfly butterfly-roam-two" src={butterflyImage} alt="" loading="lazy" decoding="async" />
+        <NatureFlyer kind="bee" flight="flight-bee-orbit" src={beeImage} />
+        <NatureFlyer kind="bee" flight="flight-bee-left" src={beeImage} />
+        <NatureFlyer kind="bee" flight="flight-bee-right" src={beeImage} />
+        <NatureFlyer kind="butterfly" flight="flight-butterfly-left" src={butterflyImage} />
+        <NatureFlyer kind="butterfly" flight="flight-butterfly-right" src={butterflyImage} />
       </div>
       <div className="honey-ambient honey-ambient-one" aria-hidden="true"><span /><span /><span /></div>
       <div className="honey-ambient honey-ambient-two" aria-hidden="true"><span /><span /></div>

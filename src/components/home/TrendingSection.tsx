@@ -33,9 +33,10 @@ export function TrendingSection() {
         const cardCenter = rect.left + rect.width / 2
         const signedDistance = (cardCenter - viewportCenter) / depthRange
         const distance = Math.min(Math.abs(signedDistance), 1)
-        card.style.setProperty('--marquee-scale', `${1 - distance * 0.15}`)
-        card.style.setProperty('--marquee-opacity', `${1 - distance * 0.46}`)
-        card.style.setProperty('--marquee-rotate', `${signedDistance * -9}deg`)
+        card.style.setProperty('--marquee-scale', `${1 - distance * 0.08}`)
+        card.style.setProperty('--marquee-opacity', `${1 - distance * 0.3}`)
+        card.style.setProperty('--marquee-rotate', `${signedDistance * -5}deg`)
+        card.style.setProperty('--marquee-focus', `${Math.max(0, 1 - distance * 1.6)}`)
       })
       frame = window.requestAnimationFrame(updateDepth)
     }
@@ -72,18 +73,31 @@ export function TrendingSection() {
   return (
     <section className="overflow-hidden bg-[#f8f5ee] pb-28 dark:bg-stone-950" id="trending">
       <div className="product-ticker" aria-label="Popular product scroller" ref={tickerRef}>
+        <div className="ticker-grain" aria-hidden="true" />
         <div className="scroller-glow scroller-glow-one" aria-hidden="true" />
         <div className="scroller-glow scroller-glow-two" aria-hidden="true" />
-        <div className="product-ticker-track relative flex w-max items-center gap-5 pr-5" aria-label="Popular products">
-          {tickerProducts.map((product, index) => (
-            <button className="ticker-product group" key={`${product.id}-${index}`} type="button" onClick={() => setActiveId(product.id)}>
-              <span className="ticker-card-surface flex items-center gap-4">
-                <span className="ticker-image size-16 shrink-0 overflow-hidden"><img className="size-full object-cover transition duration-500 group-hover:scale-110 group-hover:rotate-3" src={product.image} alt="" /></span>
-                <span className="min-w-[128px] text-left"><small className="mb-1 block text-[8px] font-bold uppercase tracking-[.17em] opacity-50">Popular • 0{index % tickerSource.length + 1}</small><strong className="block text-[13px] font-bold leading-tight">{product.name}</strong><span className="mt-1.5 block text-[11px] font-bold opacity-70">₹{product.price}</span></span>
-                <span className="ticker-arrow grid size-7 shrink-0 place-items-center rounded-full border border-current/20 text-sm transition duration-300 group-hover:rotate-45 group-hover:scale-110">↗</span>
-              </span>
-            </button>
-          ))}
+        <div className="product-ticker-viewport">
+          <div className="product-ticker-track relative flex w-max items-center gap-4 pr-4" aria-label="Popular products">
+            {tickerProducts.map((product, index) => (
+              <button className="ticker-product group" key={`${product.id}-${index}`} type="button" onClick={() => setActiveId(product.id)}>
+                <span className="ticker-card-surface">
+                  <span className="ticker-image size-[60px] shrink-0 overflow-hidden">
+                    <img className="size-full object-cover transition duration-700 ease-out group-hover:scale-[1.14]" src={product.image} alt="" />
+                  </span>
+                  <span className="min-w-[130px] flex-1 text-left">
+                    <small className="flex items-center gap-1.5 text-[8px] font-bold uppercase tracking-[.24em] text-[#d9b57e]/70">
+                      Popular
+                      <span className="ticker-rule" />
+                      <span className="text-[#e9c589]/90">0{index % tickerSource.length + 1}</span>
+                    </small>
+                    <strong className="mt-1.5 block font-display text-[15px] font-bold leading-tight tracking-[-.01em] text-[#f8f2e6]">{product.name}</strong>
+                    <span className="mt-1 block text-[11.5px] font-bold tracking-[.02em] text-[#e9c187] tabular-nums">₹{product.price}</span>
+                  </span>
+                  <span className="ticker-arrow shrink-0"><ArrowUpRight size={15} strokeWidth={2.4} /></span>
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
