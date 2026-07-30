@@ -66,7 +66,7 @@ export function Header() {
       <div className={`hidden items-center justify-center overflow-hidden bg-[#173f32] px-5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#f6e9cd] transition-all sm:flex ${isScrolled ? 'h-0' : 'h-8'}`}>
         Free delivery above ₹999 <span className="mx-3 text-[#d8b36a]">•</span> Freshly packed after you order
       </div>
-      <div className="mx-auto flex h-[72px] max-w-[1440px] items-center justify-between px-5 sm:px-8 lg:px-14">
+      <div className="mx-auto flex h-[84px] max-w-[1440px] items-center justify-between px-5 sm:px-8 lg:px-14">
         <Brand />
 
         <nav className="hidden items-center gap-1 md:flex" aria-label="Main navigation">

@@ -1,34 +1,25 @@
-import { Camera, MessageCircle, ThumbsUp } from 'lucide-react'
 import bosscoLogo from '../../assets/images/Bossco_Logo__2__page-0001-removebg-preview.png'
+import { FacebookIcon, InstagramIcon, WhatsAppIcon } from '../ui/SocialIcons'
 
 const socialLinks = [
-  { label: 'Instagram', icon: Camera },
-  { label: 'Facebook', icon: ThumbsUp },
-  { label: 'WhatsApp', icon: MessageCircle },
+  { label: 'Instagram', href: 'https://instagram.com', icon: InstagramIcon },
+  { label: 'Facebook', href: 'https://facebook.com', icon: FacebookIcon },
+  { label: 'WhatsApp', href: 'https://wa.me/918807783007', icon: WhatsAppIcon },
 ] as const
 
 export function FooterBrand() {
   return (
     <div>
-      <a className="inline-grid size-[88px] place-items-center" href="#home" aria-label="Bossco home">
-        <img
-          className="size-[122px] max-w-none object-contain"
-          src={bosscoLogo}
-          alt="Bossco — House of Dry Fruits and Nuts"
-        />
+      <a className="footer-logo" href="#home" aria-label="Bossco home">
+        <img src={bosscoLogo} alt="Bossco — House of Dry Fruits and Nuts" />
       </a>
-      <p className="mt-7 max-w-[220px] text-sm leading-7 text-stone-400">
-        “Celebrate Every Moment with the Richness of Dry Fruits!”
+      <p className="mt-6 max-w-[250px] font-display text-[15px] italic leading-7 text-[#e2d7c1]">
+        “Celebrate every moment with the richness of dry fruits.”
       </p>
-      <div className="mt-6 flex gap-3">
-        {socialLinks.map(({ label, icon: Icon }) => (
-          <a
-            className="grid size-10 place-items-center rounded-full bg-white/10 text-stone-300 transition hover:-translate-y-0.5 hover:bg-[#dfa66c] hover:text-white"
-            href={`#${label.toLowerCase()}`}
-            aria-label={label}
-            key={label}
-          >
-            <Icon aria-hidden="true" size={17} />
+      <div className="mt-7 flex gap-2.5">
+        {socialLinks.map(({ label, href, icon: Icon }) => (
+          <a className="footer-social" href={href} aria-label={label} key={label} target="_blank" rel="noreferrer">
+            <Icon />
           </a>
         ))}
       </div>

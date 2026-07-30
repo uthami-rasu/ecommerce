@@ -1,4 +1,5 @@
 import { brandStats } from '../../constants/brandStats'
+import { CountUp } from '../ui/CountUp'
 
 export function StatsBand() {
   return (
@@ -10,7 +11,7 @@ export function StatsBand() {
           <div className="stat-item relative" key={stat.label} data-reveal>
             <span className="mb-4 inline-grid size-7 place-items-center rounded-full border border-[#d5ad68]/40 text-[10px] text-[#e7c88d]">0{index + 1}</span>
             <dt className="text-[clamp(2.3rem,4vw,3.35rem)] font-bold leading-none">
-              {stat.value}
+              <CountUp value={stat.value} />
             </dt>
             <dd className="mt-3 text-xs text-stone-300">{stat.label}</dd>
           </div>

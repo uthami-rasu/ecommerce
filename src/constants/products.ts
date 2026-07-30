@@ -17,11 +17,11 @@ export const productCategories: Array<'All' | ProductCategory> = [
 ]
 
 export const favoriteProducts: Product[] = [
-  { id: 1, name: 'Premium Peanut Chikki', image: peanutChikki, category: 'Peanuts', weight: '500g Pack', price: 699, reviews: 65 },
+  { id: 1, name: 'Premium Peanut Chikki', image: peanutChikki, category: 'Peanuts', weight: '500g Pack', price: 699, reviews: 65, badge: 'Bestseller' },
   { id: 2, name: 'Premium California Almonds', image: almonds, category: 'Nuts', weight: '500g Pack', price: 699, reviews: 65 },
-  { id: 3, name: 'Premium Dried Figs', image: driedFigs, category: 'Dried fruits', weight: '500g Pack', price: 699, reviews: 65 },
+  { id: 3, name: 'Premium Dried Figs', image: driedFigs, category: 'Dried fruits', weight: '500g Pack', price: 699, reviews: 65, badge: 'Bestseller' },
   { id: 4, name: 'Premium Green Kiwi', image: greenKiwi, category: 'Dried fruits', weight: '500g Pack', price: 699, reviews: 65 },
-  { id: 5, name: 'Premium Red Berries', image: redBerries, category: 'Other nuts', weight: '500g Pack', price: 699, reviews: 65 },
+  { id: 5, name: 'Premium Red Berries', image: redBerries, category: 'Other nuts', weight: '500g Pack', price: 699, reviews: 65, badge: 'New' },
   { id: 6, name: 'Premium Dried Amla', image: driedAmla, category: 'Mixed nuts', weight: '500g Pack', price: 699, reviews: 65 },
   { id: 7, name: 'Premium Black Prunes', image: blackPrunes, category: 'Dried fruits', weight: '500g Pack', price: 699, reviews: 65 },
   { id: 8, name: 'Premium Sweet Rings', image: sweetRings, category: 'Other nuts', weight: '500g Pack', price: 699, reviews: 65 },

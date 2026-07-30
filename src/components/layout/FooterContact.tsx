@@ -3,21 +3,23 @@ import { Mail, MapPin, Phone } from 'lucide-react'
 export function FooterContact() {
   return (
     <address className="not-italic">
-      <h2 className="text-sm font-semibold text-white">Contact Us</h2>
-      <ul className="mt-7 space-y-5 text-sm text-stone-400">
+      <h2 className="footer-heading">Contact Us</h2>
+      <ul className="mt-6 space-y-4 text-sm">
         <li className="flex items-start gap-3">
-          <MapPin className="mt-0.5 shrink-0 text-lime-200" size={17} fill="currentColor" />
-          <span>5D/12B Pasuvanthanal Road Kovilpatti, Kovilpatti Mpty, Thoothukudi, Tamilnadu–628501</span>
+          <span className="footer-contact-chip"><MapPin size={15} strokeWidth={1.9} /></span>
+          <span className="pt-1.5 leading-6 text-[#c8bfad]">
+            5D/12B Pasuvanthanal Road<br />Kovilpatti, Kovilpatti Mpty,<br />Thoothukudi, Tamilnadu – 628501
+          </span>
         </li>
         <li>
-          <a className="flex items-center gap-3 transition hover:text-white" href="tel:+918807783007">
-            <Phone className="shrink-0 text-lime-200" size={17} fill="currentColor" />
-            +91 8807783007
+          <a className="footer-contact-link" href="tel:+918807783007">
+            <span className="footer-contact-chip"><Phone size={15} strokeWidth={1.9} /></span>
+            +91 88077 83007
           </a>
         </li>
         <li>
-          <a className="flex items-center gap-3 transition hover:text-white" href="mailto:hello@bossco.com">
-            <Mail className="shrink-0 text-lime-200" size={17} fill="currentColor" />
+          <a className="footer-contact-link" href="mailto:hello@bossco.com">
+            <span className="footer-contact-chip"><Mail size={15} strokeWidth={1.9} /></span>
             hello@bossco.com
           </a>
         </li>

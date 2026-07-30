@@ -13,6 +13,7 @@ export type Product = {
   weight: string
   price: number
   reviews: number
+  badge?: string
 }
 
 export type TrendingProduct = Pick<
