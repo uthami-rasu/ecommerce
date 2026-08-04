@@ -9,6 +9,8 @@ import { honeyProducts } from '../constants/honeyProducts'
 import type { CatalogSort, HoneyProduct } from '../types/catalog'
 import { useAppDispatch, useAppSelector } from '../app/hooks'
 import { addToCart, toggleWishlist } from '../features/commerce/commerceSlice'
+import { StatsBand } from '../components/home/StatsBand'
+import { NewsletterSection } from '../components/home/NewsletterSection'
 
 type CategoryPageProps = { products?: HoneyProduct[] }
 type ViewMode = 'grid' | 'list'
@@ -233,6 +235,9 @@ export function CategoryPage({ products = honeyProducts }: CategoryPageProps) {
           </div>
         </div>
       </section>
+
+      <StatsBand />
+      <NewsletterSection />
 
       {filterOpen && <div className="filter-drawer-backdrop" role="presentation" onClick={() => setFilterOpen(false)}><aside className="filter-drawer" role="dialog" aria-modal="true" aria-label="Product filters" onClick={(event) => event.stopPropagation()}><div className="mb-4 flex items-center justify-between"><b className="font-display text-2xl text-[#193f32]">Refine your harvest</b><button className="icon-button" type="button" onClick={() => setFilterOpen(false)} aria-label="Close filters"><X size={19} /></button></div><FilterPanel idPrefix="mobile" {...{ search, setSearch, category, setCategory, maxPrice, setMaxPrice, selectedSizes, toggleSize, minRating, setMinRating, clear, onApply: applyFilters, isLoading }} /></aside></div>}
       {notice && <div className="catalog-toast" role="status"><span className="grid size-7 place-items-center rounded-full bg-[#dbe8c9] text-[#416b38]"><Check size={14} /></span>{notice}</div>}
