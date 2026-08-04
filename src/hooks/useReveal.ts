@@ -14,7 +14,22 @@ export function useReveal() {
       { threshold: 0.12 },
     )
 
-    document.querySelectorAll('[data-reveal]').forEach((element) => observer.observe(element))
-    return () => observer.disconnect()
+    const observeReveals = (root: ParentNode = document) => root.querySelectorAll('[data-reveal]').forEach((element) => observer.observe(element))
+    observeReveals()
+
+    // Hash navigation swaps the homepage and category page without a reload.
+    // Observe newly mounted sections so their entrance motion still runs.
+    const mutationObserver = new MutationObserver((mutations) => mutations.forEach((mutation) => mutation.addedNodes.forEach((node) => {
+      if (node instanceof HTMLElement) {
+        if (node.matches('[data-reveal]')) observer.observe(node)
+        observeReveals(node)
+      }
+    })))
+    mutationObserver.observe(document.getElementById('root')!, { childList: true, subtree: true })
+
+    return () => {
+      observer.disconnect()
+      mutationObserver.disconnect()
+    }
   }, [])
 }

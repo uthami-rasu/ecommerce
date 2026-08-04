@@ -14,31 +14,26 @@ import { useState } from 'react'
 import { useEffect } from 'react'
 import { Brand } from '../ui/Brand'
 import { SearchPanel } from './SearchPanel'
+import { useAppSelector } from '../../app/hooks'
 
 const headerActions = [
   { label: 'Wishlist', icon: Heart },
   { label: 'Account', icon: UserRound },
 ] as const
 
-const categoryLinks = [
-  { label: 'Daily nuts', detail: 'Almonds, cashews & pistachios', icon: '🥜' },
-  { label: 'Dried fruits', detail: 'Figs, berries, dates & kiwi', icon: '🍓' },
-  { label: 'Smart mixes', detail: 'Protein & energy trail mixes', icon: '⚡' },
-  { label: 'Gift hampers', detail: 'Made for every celebration', icon: '🎁' },
-]
-
 const navItems = [
   { label: 'Home', href: '#home', icon: Home },
-  { label: 'Shop', href: '#favorites', icon: ShoppingBag, opensMenu: true },
+  { label: 'Categories', href: '#honey', icon: ShoppingBag },
   { label: 'Gifting', href: '#trending', icon: Sparkles },
   { label: 'Gallery', href: '#gallery', icon: Images },
   { label: 'Contact', href: '#contact', icon: MessageCircle },
 ] as const
 
 export function Header() {
+  const cartCount = useAppSelector((state) => state.commerce.cart.reduce((total, item) => total + item.quantity, 0))
+  const wishlistCount = useAppSelector((state) => state.commerce.wishlist.length)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
-  const [isCategoriesOpen, setIsCategoriesOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
 
   useEffect(() => {
@@ -46,7 +41,6 @@ export function Header() {
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setIsSearchOpen(false)
-        setIsCategoriesOpen(false)
       }
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault()
@@ -70,11 +64,7 @@ export function Header() {
         <Brand />
 
         <nav className="hidden items-center gap-1 md:flex" aria-label="Main navigation">
-          {navItems.map(({ label, href, icon: Icon, ...item }) => 'opensMenu' in item && item.opensMenu ? (
-            <button className={`nav-icon-link group ${isCategoriesOpen ? 'is-active' : ''}`} key={label} type="button" onClick={() => setIsCategoriesOpen((open) => !open)} aria-expanded={isCategoriesOpen}>
-              <Icon size={15} strokeWidth={1.8} /><span>{label}</span><span className={`text-[8px] transition ${isCategoriesOpen ? 'rotate-180' : ''}`}>▼</span>
-            </button>
-          ) : (
+          {navItems.map(({ label, href, icon: Icon }) => (
             <a className="nav-icon-link group" href={href} key={label}>
               <Icon size={15} strokeWidth={1.8} /><span>{label}</span>
             </a>
@@ -89,17 +79,16 @@ export function Header() {
               <span className="absolute -bottom-7 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-[#173f32] px-2 py-1 text-[9px] text-white group-hover:block">Search ⌘K</span>
             </button>
             {headerActions.map(({ label, icon: Icon }) => (
-              <button className="icon-button group" aria-label={label} key={label} type="button">
+              <a className="icon-button group relative" aria-label={label} key={label} href={label === 'Wishlist' ? '#wishlist' : '#account'}>
                 <Icon className="transition group-hover:-translate-y-0.5 group-hover:scale-110" size={18} />
-              </button>
+                {label === 'Wishlist' && wishlistCount > 0 && <span className="header-count">{wishlistCount}</span>}
+              </a>
             ))}
           </div>
-          <button className="icon-button relative" aria-label="Shopping cart" type="button">
+          <a className="icon-button relative" aria-label="Shopping cart" href="#cart">
             <ShoppingBag size={18} />
-            <span className="absolute right-0 top-0 grid size-4 place-items-center rounded-full bg-[#5c8c50] text-[9px] font-bold text-white">
-              2
-            </span>
-          </button>
+            {cartCount > 0 && <span className="header-count">{cartCount}</span>}
+          </a>
           <button
             className="icon-button mobile-only"
             aria-label="Toggle menu"
@@ -111,18 +100,6 @@ export function Header() {
           </button>
         </div>
       </div>
-      {isCategoriesOpen && (
-        <div className="mega-menu absolute inset-x-0 top-full border-t border-[#e9e1d5] bg-[#fffdf8]/98 px-6 py-6 shadow-[0_24px_60px_rgba(25,48,39,.14)] backdrop-blur-xl dark:bg-stone-950">
-          <div className="mx-auto grid max-w-[1050px] grid-cols-2 gap-3 lg:grid-cols-4">
-            {categoryLinks.map((category, index) => (
-              <a className="group flex items-center gap-4 rounded-2xl border border-transparent p-4 transition hover:border-[#dfd0b7] hover:bg-[#f6f0e5]" href="#favorites" key={category.label} onClick={() => setIsCategoriesOpen(false)} style={{ animationDelay: `${index * 60}ms` }}>
-                <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-white text-xl shadow-sm transition duration-300 group-hover:-rotate-6 group-hover:scale-110">{category.icon}</span>
-                <span><strong className="block text-sm text-[#193f32] dark:text-white">{category.label}</strong><small className="mt-1 block text-[10px] text-stone-500">{category.detail}</small></span>
-              </a>
-            ))}
-          </div>
-        </div>
-      )}
       {isMenuOpen && (
         <nav className="border-t border-stone-100 bg-white px-5 py-4 shadow-lg dark:border-stone-800 dark:bg-stone-950 md:hidden" aria-label="Mobile navigation">
           {navItems.map(({ label, href, icon: Icon }) => (
