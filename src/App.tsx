@@ -8,8 +8,10 @@ import { HomePage } from './pages/HomePage'
 import { ProductDetailPage } from './pages/ProductDetailPage'
 import { ScrollProgress } from './components/ui/ScrollProgress'
 import { honeyProducts } from './constants/honeyProducts'
-import { CartPage, CheckoutPage, OrderCompletePage, WishlistPage } from './pages/CommercePages'
+import { CartPage, CheckoutPage, MyAccountPage, OrderCompletePage, WishlistPage } from './pages/CommercePages'
 import { ContactPage } from './pages/ContactPage'
+
+import { Toaster } from 'sonner'
 
 function App() {
   const [route, setRoute] = useState(() => window.location.hash)
@@ -31,9 +33,28 @@ function App() {
 
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900 transition-colors duration-300 dark:bg-stone-950 dark:text-stone-50">
+      <Toaster position="top-right" richColors closeButton toastOptions={{ style: { borderRadius: '12px', fontFamily: 'var(--font-sans)' } }} />
       <ScrollProgress />
       <Header />
-      {selectedProduct ? <ProductDetailPage product={selectedProduct} products={honeyProducts} /> : route === '#cart' ? <CartPage products={honeyProducts} /> : route === '#checkout' ? <CheckoutPage products={honeyProducts} /> : route === '#order-complete' ? <OrderCompletePage products={honeyProducts} /> : route === '#wishlist' ? <WishlistPage products={honeyProducts} /> : route === '#contact' ? <ContactPage /> : route === '#honey' ? <CategoryPage /> : <HomePage />}
+      {selectedProduct ? (
+        <ProductDetailPage product={selectedProduct} products={honeyProducts} />
+      ) : route === '#cart' ? (
+        <CartPage products={honeyProducts} />
+      ) : route === '#checkout' ? (
+        <CheckoutPage products={honeyProducts} />
+      ) : route === '#order-complete' ? (
+        <OrderCompletePage products={honeyProducts} />
+      ) : route === '#wishlist' ? (
+        <WishlistPage products={honeyProducts} />
+      ) : route === '#account' || route === '#my-account' ? (
+        <MyAccountPage products={honeyProducts} />
+      ) : route === '#contact' ? (
+        <ContactPage />
+      ) : route === '#honey' ? (
+        <CategoryPage />
+      ) : (
+        <HomePage />
+      )}
     </div>
   )
 }

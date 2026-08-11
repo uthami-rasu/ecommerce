@@ -1,7 +1,10 @@
+import { toast } from 'sonner'
 import { Check, Heart, Plus } from 'lucide-react'
 import { useState } from 'react'
 import type { Product } from '../../types/product'
 import { ProductRating } from './ProductRating'
+import { useAppDispatch, useAppSelector } from '../../app/hooks'
+import { addToCart, toggleWishlist } from '../../features/commerce/commerceSlice'
 
 type ProductCardProps = {
   product: Product
@@ -9,8 +12,9 @@ type ProductCardProps = {
 }
 
 export function ProductCard({ product, index = 0 }: ProductCardProps) {
+  const dispatch = useAppDispatch()
+  const isLiked = useAppSelector((state) => state.commerce.wishlist.includes(product.id))
   const [isAdded, setIsAdded] = useState(false)
-  const [isLiked, setIsLiked] = useState(false)
 
   return (
     <article className="product-card group relative mx-auto flex w-full flex-col p-2.5" data-reveal style={{ transitionDelay: `${index * 45}ms` }}>
@@ -25,7 +29,14 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
         {product.badge ? <span className="product-badge">{product.badge}</span> : null}
         <button
           className={`product-fav ${isLiked ? 'is-liked' : ''}`}
-          onClick={() => setIsLiked((liked) => !liked)}
+          onClick={() => {
+            dispatch(toggleWishlist(product.id))
+            if (isLiked) {
+              toast.info('Removed from Wishlist', { description: `${product.name} removed.` })
+            } else {
+              toast.success('Added to Wishlist! ❤️', { description: `${product.name} saved to collection.` })
+            }
+          }}
           type="button"
           aria-label={`${isLiked ? 'Remove' : 'Add'} ${product.name} ${isLiked ? 'from' : 'to'} wishlist`}
         >
@@ -50,7 +61,12 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
             <button
               className={`product-add ${isAdded ? 'is-added' : ''}`}
               type="button"
-              onClick={() => { setIsAdded(true); window.setTimeout(() => setIsAdded(false), 1600) }}
+              onClick={() => {
+                dispatch(addToCart({ productId: product.id, quantity: 1, weight: product.weight || '250g' }))
+                setIsAdded(true)
+                toast.success('Added to Cart! 🛒', { description: `${product.name} (${product.weight || '250g'}) added to your cart.` })
+                window.setTimeout(() => setIsAdded(false), 1600)
+              }}
               aria-label={`Add ${product.name} to cart`}
             >
               {isAdded ? <Check size={14} strokeWidth={2.6} /> : <Plus size={14} strokeWidth={2.6} />}

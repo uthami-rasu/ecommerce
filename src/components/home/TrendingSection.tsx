@@ -1,9 +1,12 @@
+import { toast } from 'sonner'
 import { ArrowUpRight, Check, Plus, Sparkles, Star } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { trendingProducts } from '../../constants/trendingProducts'
 import pistachioPhoto from '../../assets/images/unsplash-pistachio.jpg'
 import mixedNutsPhoto from '../../assets/images/unsplash-cashew.jpg'
 import almondPhoto from '../../assets/images/unsplash-almond.jpg'
+import { useAppDispatch } from '../../app/hooks'
+import { addToCart } from '../../features/commerce/commerceSlice'
 
 const featuredTrendingProducts = trendingProducts.slice(0, 5)
 const tickerSource = [
@@ -15,6 +18,7 @@ const tickerSource = [
 const tickerProducts = [...tickerSource, ...tickerSource]
 
 export function TrendingSection() {
+  const dispatch = useAppDispatch()
   const [activeId, setActiveId] = useState(featuredTrendingProducts[1].id)
   const [isAdded, setIsAdded] = useState(false)
   const tickerRef = useRef<HTMLDivElement>(null)
@@ -66,7 +70,9 @@ export function TrendingSection() {
   }, [])
 
   const addFeatured = () => {
+    dispatch(addToCart({ productId: activeProduct.id, quantity: 1, weight: activeProduct.weight || '250g' }))
     setIsAdded(true)
+    toast.success('Added to Bag! 🛒', { description: `${activeProduct.name} added to your cart.` })
     window.setTimeout(() => setIsAdded(false), 1600)
   }
 

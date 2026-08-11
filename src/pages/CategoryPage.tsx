@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import {
   Check, ChevronDown, Filter, Grid2X2, Heart, Info, LayoutList,
   Leaf, MapPin, Minus, PackageCheck, Search, ShieldCheck, ShoppingBag, SlidersHorizontal,
@@ -230,7 +231,33 @@ export function CategoryPage({ products = honeyProducts }: CategoryPageProps) {
           <div className="mt-6 grid gap-6 lg:grid-cols-[245px_1fr] xl:grid-cols-[265px_1fr]">
             <aside className="catalog-filter"><FilterPanel idPrefix="desktop" {...{ search, setSearch, category, setCategory, maxPrice, setMaxPrice, selectedSizes, toggleSize, minRating, setMinRating, clear, onApply: applyFilters, isLoading }} /></aside>
             <div className="catalog-results-shell">
-              {isLoading ? <CatalogLoading /> : visible.length ? <div className={`product-catalog-grid ${view === 'list' ? 'is-list' : ''}`}>{visible.map((product) => <ProductCard key={product.id} product={product} view={view} wished={wished.includes(product.id)} onWish={() => dispatch(toggleWishlist(product.id))} onAdd={() => { dispatch(addToCart({ productId: product.id, quantity: 1, weight: product.size })); flash(`${product.name} added to your cart`) }} />)}</div> : <div className="catalog-empty"><Minus size={24} /><h3>No jars match those filters</h3><p>Try widening your price or removing a size.</p><button type="button" onClick={resetResults}>Reset filters</button></div>}
+              {isLoading ? <CatalogLoading /> : visible.length ? (
+                <div className={`product-catalog-grid ${view === 'list' ? 'is-list' : ''}`}>
+                  {visible.map((product) => {
+                    const isWished = wished.includes(product.id)
+                    return (
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                        view={view}
+                        wished={isWished}
+                        onWish={() => {
+                          dispatch(toggleWishlist(product.id))
+                          if (isWished) {
+                            toast.info('Removed from Wishlist', { description: `${product.name} removed.` })
+                          } else {
+                            toast.success('Added to Wishlist! ❤️', { description: `${product.name} saved to collection.` })
+                          }
+                        }}
+                        onAdd={() => {
+                          dispatch(addToCart({ productId: product.id, quantity: 1, weight: product.size }))
+                          toast.success('Added to Cart! 🛒', { description: `${product.name} (${product.size}) added to your bag.` })
+                        }}
+                      />
+                    )
+                  })}
+                </div>
+              ) : <div className="catalog-empty"><Minus size={24} /><h3>No jars match those filters</h3><p>Try widening your price or removing a size.</p><button type="button" onClick={resetResults}>Reset filters</button></div>}
             </div>
           </div>
         </div>

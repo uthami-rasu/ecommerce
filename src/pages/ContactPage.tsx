@@ -1,3 +1,4 @@
+import { toast } from 'sonner'
 import { useState } from 'react'
 import { Check, Globe2, Mail, MapPin, MessageCircle, Phone, Send } from 'lucide-react'
 import { Footer } from '../components/layout/Footer'
@@ -19,7 +20,11 @@ export function ContactPage() {
       </section>
 
       <div className="contact-shell">
-        <form className="contact-form" onSubmit={(event) => { event.preventDefault(); setSubmitted(true) }}>
+        <form className="contact-form" onSubmit={(event) => {
+          event.preventDefault()
+          setSubmitted(true)
+          toast.success('Message sent successfully!', { description: 'Thank you! We usually reply within one business day.' })
+        }}>
           <div className="contact-form-heading"><div><span>Send a note</span><h2>How can we help?</h2></div><Mail size={25} /></div>
           <div className="contact-form-layout">
             <aside className="contact-form-aside">
