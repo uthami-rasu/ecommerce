@@ -14,6 +14,7 @@ export type Product = {
   price: number
   reviews: number
   badge?: string
+  stock?: number
 }
 
 export type TrendingProduct = Pick<

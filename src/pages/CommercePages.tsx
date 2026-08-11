@@ -371,124 +371,280 @@ export function OrderCompletePage({ products }: CommerceProps) {
     </main>
   )
 }
-
 export function WishlistPage({ products }: CommerceProps) {
   const wishlist = useAppSelector((state) => state.commerce.wishlist)
+  const cart = useAppSelector((state) => state.commerce.cart)
   const dispatch = useAppDispatch()
-  const wishedProducts = wishlist.map((id) => products.find((product) => product.id === id)).filter((product): product is HoneyProduct => Boolean(product))
+
+  const [selectedCategory, setSelectedCategory] = useState<string>('All')
+  const [searchQuery, setSearchQuery] = useState('')
+
+  const wishedProducts = wishlist
+    .map((id) => products.find((p) => p.id === id))
+    .filter((p): p is HoneyProduct => Boolean(p))
+
+  const categories = ['All', ...Array.from(new Set(wishedProducts.map((p) => p.category)))]
+
+  const filteredProducts = wishedProducts.filter((p) => {
+    const matchesCat = selectedCategory === 'All' || p.category === selectedCategory
+    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase())
+    return matchesCat && matchesSearch
+  })
+
+  const cartTotal = cart.reduce((sum, line) => {
+    const product = getProduct(products, line)
+    return sum + (product ? product.price * line.quantity : 0)
+  }, 0)
+  const cartCount = cart.reduce((sum, line) => sum + line.quantity, 0)
 
   const addAllToCart = () => {
-    wishedProducts.forEach((p) => {
-      dispatch(addToCart({ productId: p.id, quantity: 1, weight: p.size }))
-    })
-    toast.success('All items added to cart! 🛒', { description: `${wishedProducts.length} items moved to your shopping bag.` })
+    filteredProducts.forEach((p) => dispatch(addToCart({ productId: p.id, quantity: 1, weight: p.size })))
+    toast.success(`${filteredProducts.length} items added to cart 🍯`)
   }
 
   return (
-    <main className="commerce-page wishlist-page relative overflow-hidden bg-stone-50/50 dark:bg-stone-950">
-      <NutDecorations />
-      <div className="commerce-wrap relative z-10 mx-auto max-w-[1240px] px-5 py-12 sm:px-8">
-        <div className="wishlist-heading text-center max-w-2xl mx-auto mb-12">
-          <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest bg-amber-50 dark:bg-stone-900 text-amber-700 dark:text-amber-400 border border-amber-200/60 dark:border-amber-800/40 shadow-sm">
-            <Heart size={14} className="text-amber-600 fill-amber-600" /> Your Private Collection
-          </span>
-          <h1 className="mt-4 font-display text-4xl sm:text-5xl font-bold text-[#173f32] dark:text-stone-100 tracking-tight">
-            Saved Favourites
-          </h1>
-          <p className="mt-3 text-stone-600 dark:text-stone-400 text-sm sm:text-base">
-            The rare jars and artisan honey varieties you loved, ready for your kitchen shelf.
-          </p>
-          {wishedProducts.length > 0 && (
-            <div className="mt-6 flex justify-center gap-4">
-              <button
-                type="button"
-                onClick={addAllToCart}
-                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-[#173f32] hover:bg-[#205443] text-white text-xs font-bold uppercase tracking-wider shadow-md transition-all hover:scale-[1.02]"
-              >
-                <ShoppingBag size={15} /> Add All ({wishedProducts.length}) to Cart
-              </button>
-            </div>
-          )}
-        </div>
+    <main className="commerce-page wishlist-page relative min-h-screen bg-[#f7f4ef] dark:bg-[#0d0d0d] overflow-x-hidden">
+      {/* Ambient blobs */}
+      <div className="pointer-events-none absolute -top-60 -left-60 size-[800px] rounded-full bg-amber-300/20 dark:bg-amber-500/8 blur-[140px]" />
+      <div className="pointer-events-none absolute top-1/2 -right-60 size-[600px] rounded-full bg-emerald-300/15 dark:bg-emerald-600/8 blur-[110px]" />
 
-        {wishedProducts.length === 0 ? (
-          <div className="empty-cart text-center py-20 px-6 max-w-md mx-auto bg-white/80 dark:bg-stone-900/80 backdrop-blur-md rounded-3xl border border-stone-200/80 dark:border-stone-800 shadow-xl">
-            <div className="size-20 mx-auto mb-6 grid place-items-center rounded-full bg-amber-50 dark:bg-stone-800 text-amber-600 shadow-inner">
-              <Heart size={36} className="text-amber-500 animate-pulse" />
+      {/* ── STICKY HEADER BAR ── */}
+      <div className="sticky top-0 z-30 border-b border-black/5 dark:border-white/5 bg-white/70 dark:bg-[#0d0d0d]/80 backdrop-blur-2xl">
+        <div className="mx-auto max-w-[1440px] px-6 sm:px-10 h-16 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="size-9 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 grid place-items-center shadow-lg shadow-amber-300/40">
+              <Heart size={16} className="text-white fill-white" />
             </div>
-            <h2 className="font-display text-2xl font-bold text-stone-900 dark:text-stone-100">Your collection is empty</h2>
-            <p className="mt-2 text-sm text-stone-500 dark:text-stone-400">
-              Save your favourite honey varieties using the heart button while browsing our catalog.
+            <div>
+              <h1 className="font-display text-lg sm:text-xl font-black text-[#173f32] dark:text-stone-100 leading-none">
+                My Vault
+              </h1>
+              <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5">
+                {wishedProducts.length} saved item{wishedProducts.length !== 1 ? 's' : ''}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            {/* Search pill */}
+            <div className="relative hidden sm:block">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search vault…"
+                className="h-9 w-48 rounded-full border border-stone-200/80 dark:border-stone-800 bg-stone-100/60 dark:bg-stone-900 pl-3.5 pr-8 text-xs font-semibold text-stone-900 dark:text-stone-100 placeholder:text-stone-400 focus:outline-none focus:ring-2 focus:ring-amber-400/30 transition"
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 text-xs">✕</button>
+              )}
+            </div>
+
+            {/* Cart chip */}
+            {cartCount > 0 && (
+              <a href="#cart" className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#173f32] hover:bg-[#1e5040] text-white text-xs font-bold shadow-lg shadow-[#173f32]/30 transition-all hover:scale-105">
+                <ShoppingBag size={13} className="text-amber-300" />
+                <span>{money(cartTotal)}</span>
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-[1440px] px-6 sm:px-10 py-8">
+
+        {/* ── CATEGORY FILTER ROW ── */}
+        {wishedProducts.length > 0 && (
+          <div className="mb-7 flex flex-wrap items-center gap-2.5">
+            {categories.map((cat) => {
+              const count = cat === 'All' ? wishedProducts.length : wishedProducts.filter((p) => p.category === cat).length
+              const isActive = selectedCategory === cat
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-bold border transition-all duration-200 ${
+                    isActive
+                      ? 'bg-[#173f32] text-amber-300 border-transparent shadow-lg shadow-[#173f32]/20 scale-105'
+                      : 'bg-white dark:bg-stone-900 text-stone-600 dark:text-stone-400 border-stone-200/80 dark:border-stone-800 hover:border-amber-400/60 hover:text-amber-700 dark:hover:text-amber-400'
+                  }`}
+                >
+                  {cat}
+                  <span className={`px-1.5 py-0.5 rounded-lg text-[10px] font-black ${isActive ? 'bg-amber-400/25 text-amber-200' : 'bg-stone-100 dark:bg-stone-800 text-stone-500'}`}>
+                    {count}
+                  </span>
+                </button>
+              )
+            })}
+
+            <div className="ml-auto flex gap-2">
+              {filteredProducts.length > 0 && (
+                <button
+                  type="button"
+                  onClick={addAllToCart}
+                  className="flex items-center gap-2 px-5 py-2 rounded-2xl bg-amber-400 hover:bg-amber-300 text-stone-950 text-xs font-black shadow-lg shadow-amber-300/30 transition-all hover:scale-105"
+                >
+                  <ShoppingBag size={13} /> Add All ({filteredProducts.length})
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── EMPTY STATE ── */}
+        {filteredProducts.length === 0 && (
+          <div className="py-28 text-center">
+            <div className="mx-auto mb-8 size-28 rounded-[2.5rem] bg-gradient-to-br from-amber-400 via-amber-500 to-orange-500 grid place-items-center shadow-2xl shadow-amber-200/50 dark:shadow-amber-900/30 rotate-12">
+              <Heart size={52} className="text-white fill-white -rotate-12" />
+            </div>
+            <h2 className="font-display text-4xl font-black text-[#173f32] dark:text-stone-100">Nothing saved yet</h2>
+            <p className="mt-4 text-stone-500 dark:text-stone-400 text-base max-w-md mx-auto leading-relaxed">
+              Tap the ♡ heart on any honey jar while browsing to save it to your personal vault.
             </p>
             <a
               href="#honey"
-              className="mt-6 inline-flex items-center gap-2 px-7 py-3 rounded-full bg-[#173f32] text-white text-xs font-bold uppercase tracking-wider shadow-lg hover:bg-[#225746] transition"
+              className="mt-8 inline-flex items-center gap-2.5 px-9 py-4 rounded-2xl bg-[#173f32] text-white font-black text-sm shadow-xl shadow-[#173f32]/30 hover:bg-[#1e5040] transition hover:scale-105"
             >
-              Explore Honey Room
+              Explore Honey Room →
             </a>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-7">
-            {wishedProducts.map((product) => (
-              <article
-                className="group relative flex flex-col overflow-hidden rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800/80 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
-                key={product.id}
-              >
-                <div className="relative aspect-[4/3] overflow-hidden bg-stone-100 dark:bg-stone-800">
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="size-full object-cover transition-transform duration-700 group-hover:scale-105"
-                  />
-                  <span className="absolute top-3 left-3 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-white/90 dark:bg-stone-900/90 text-[#173f32] dark:text-amber-400 backdrop-blur-md shadow-sm">
-                    {product.category}
-                  </span>
-                  <button
-                    className="absolute top-3 right-3 size-9 grid place-items-center rounded-full bg-white/90 dark:bg-stone-900/90 text-rose-500 hover:bg-rose-50 hover:text-rose-600 shadow-md backdrop-blur-md transition-all hover:scale-110"
-                    type="button"
-                    onClick={() => {
-                      dispatch(toggleWishlist(product.id))
-                      toast.info('Removed from wishlist', { description: `${product.name} removed.` })
-                    }}
-                    aria-label={`Remove ${product.name} from wishlist`}
-                  >
-                    <Heart size={16} fill="currentColor" />
-                  </button>
-                </div>
+        )}
 
-                <div className="flex flex-1 flex-col p-6 text-left">
-                  <div className="flex items-center justify-between text-xs text-stone-500 dark:text-stone-400 mb-2">
-                    <span className="font-semibold">{product.origin}</span>
-                    <span className="px-2 py-0.5 rounded bg-stone-100 dark:bg-stone-800 text-[10px] font-bold uppercase">{product.size}</span>
-                  </div>
+        {/* ── PRODUCT GRID — uniform equal-size cards ── */}
+        {filteredProducts.length > 0 && (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+            {filteredProducts.map((product) => {
+              const cartLine = cart.find((l) => l.productId === product.id)
+              const cartQty = cartLine ? cartLine.quantity : 0
 
-                  <a href={`#product/${product.slug}`} className="group-hover:text-amber-700 transition-colors">
-                    <h2 className="font-display text-xl font-bold text-stone-900 dark:text-stone-100">{product.name}</h2>
-                  </a>
-                  <p className="mt-1 text-xs text-stone-500 dark:text-stone-400 line-clamp-2">{product.subtitle}</p>
+              return (
+                <article
+                  key={product.id}
+                  className="group flex flex-col overflow-hidden rounded-[1.5rem] sm:rounded-[2rem] border border-white/60 dark:border-stone-800/80 shadow-md hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 bg-white dark:bg-stone-900"
+                >
+                  {/* Full-bleed image with overlay — fixed aspect ratio on all cards */}
+                  <div className="relative aspect-[4/3] w-full overflow-hidden">
+                    <img
+                      src={product.image}
+                      alt={product.name}
+                      className="absolute inset-0 size-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      loading="lazy"
+                    />
+                    {/* Gradient scrim */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
-                  <div className="mt-auto pt-5 flex items-center justify-between border-t border-stone-100 dark:border-stone-800">
-                    <span className="font-display text-2xl font-bold text-[#173f32] dark:text-amber-400">
-                      {money(product.price)}
+                    {/* Category pill top-left */}
+                    <span className="absolute top-3 left-3 px-2.5 py-1 rounded-xl bg-black/30 backdrop-blur-md border border-white/20 text-white text-[10px] font-bold uppercase tracking-wider">
+                      {product.category}
                     </span>
+
+                    {/* Remove button top-right */}
                     <button
                       type="button"
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#173f32] hover:bg-[#235847] text-white text-xs font-bold transition shadow-sm"
                       onClick={() => {
-                        dispatch(addToCart({ productId: product.id, quantity: 1, weight: product.size }))
-                        toast.success('Added to cart! 🛒', { description: `${product.name} (${product.size}) added.` })
+                        dispatch(toggleWishlist(product.id))
+                        toast.info(`${product.name} removed from vault`)
                       }}
+                      className="absolute top-3 right-3 size-8 grid place-items-center rounded-xl bg-black/30 backdrop-blur-md border border-white/20 text-white/80 hover:bg-rose-500/80 hover:text-white hover:border-transparent transition-all duration-200 hover:scale-110"
+                      aria-label="Remove from vault"
                     >
-                      <ShoppingBag size={14} /> Add to Cart
+                      <Trash2 size={13} />
                     </button>
+
+                    {/* Bottom text overlay */}
+                    <div className="absolute bottom-0 left-0 right-0 p-4 pb-3">
+                      <p className="text-white/50 text-[10px] uppercase tracking-widest font-bold">{product.size}</p>
+                      <h3 className="text-white text-sm font-display font-black leading-snug line-clamp-2">
+                        {product.name}
+                      </h3>
+                    </div>
                   </div>
-                </div>
-              </article>
-            ))}
+
+                  {/* Price + CTA strip */}
+                  <div className="flex items-center justify-between px-4 py-3.5 gap-3">
+                    <div>
+                      <p className="font-display text-lg font-black text-[#173f32] dark:text-amber-400 leading-none">
+                        {money(product.price)}
+                      </p>
+                      <p className="text-[10px] text-stone-400 mt-0.5">
+                        Stock <span className="font-bold text-[#173f32] dark:text-amber-400">24</span>
+                      </p>
+                    </div>
+
+                    {cartQty === 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          dispatch(addToCart({ productId: product.id, quantity: 1, weight: product.size }))
+                          toast.success('Added! 🛒', { description: product.name })
+                        }}
+                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#173f32] hover:bg-[#1e5040] text-white text-xs font-black shadow-md shadow-[#173f32]/20 transition-all hover:scale-105"
+                      >
+                        <Plus size={12} strokeWidth={3} /> Add
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-1.5 rounded-xl bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 px-2 py-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (cartQty <= 1) dispatch(removeFromCart({ productId: product.id, weight: product.size }))
+                            else dispatch(setCartQuantity({ productId: product.id, weight: product.size, quantity: cartQty - 1 }))
+                          }}
+                          className="size-6 grid place-items-center rounded-lg bg-white dark:bg-stone-700 text-stone-800 dark:text-stone-200 hover:bg-stone-200 transition"
+                        >
+                          <Minus size={11} strokeWidth={2.5} />
+                        </button>
+                        <span className="w-5 text-center text-sm font-black text-stone-900 dark:text-stone-100">{cartQty}</span>
+                        <button
+                          type="button"
+                          onClick={() => dispatch(setCartQuantity({ productId: product.id, weight: product.size, quantity: cartQty + 1 }))}
+                          className="size-6 grid place-items-center rounded-lg bg-white dark:bg-stone-700 text-stone-800 dark:text-stone-200 hover:bg-stone-200 transition"
+                        >
+                          <Plus size={11} strokeWidth={2.5} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </article>
+              )
+            })}
+          </div>
+        )}
+
+        {/* ── BOTTOM CTA STRIP ── */}
+        {filteredProducts.length > 0 && (
+          <div className="mt-14 overflow-hidden rounded-3xl bg-gradient-to-r from-[#0f2e22] via-[#173f32] to-[#0f2e22] p-8 sm:p-10 shadow-2xl shadow-[#173f32]/30 relative">
+            {/* Subtle texture dots */}
+            <div className="pointer-events-none absolute inset-0 opacity-10 bg-[radial-gradient(circle,_#f59e0b_1px,_transparent_1px)] bg-[length:24px_24px]" />
+            <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+              <div>
+                <p className="text-amber-400/70 text-[11px] uppercase tracking-[0.2em] font-bold mb-2">Ready to checkout?</p>
+                <h2 className="font-display text-2xl sm:text-4xl font-black text-white leading-tight">
+                  {filteredProducts.length} Jar{filteredProducts.length > 1 ? 's' : ''} waiting in your vault
+                </h2>
+                <p className="text-white/50 text-sm mt-2">Add everything at once and save time at checkout.</p>
+              </div>
+              <div className="flex flex-wrap gap-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={addAllToCart}
+                  className="flex items-center gap-2 px-7 py-3.5 rounded-2xl bg-amber-400 hover:bg-amber-300 text-stone-950 font-black text-sm shadow-xl shadow-black/30 transition-all hover:scale-105"
+                >
+                  <ShoppingBag size={16} /> Add All to Cart
+                </button>
+                <a
+                  href="#cart"
+                  className="flex items-center gap-2 px-7 py-3.5 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/15 text-white font-bold text-sm transition-all"
+                >
+                  View Cart →
+                </a>
+              </div>
+            </div>
           </div>
         )}
       </div>
-      <div className="commerce-bottom-bar" />
     </main>
   )
 }
+

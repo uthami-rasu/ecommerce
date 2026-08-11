@@ -48,7 +48,33 @@ function App() {
 
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900 transition-colors duration-300 dark:bg-stone-950 dark:text-stone-50">
-      <Toaster position="top-right" richColors closeButton toastOptions={{ style: { borderRadius: '12px', fontFamily: 'var(--font-sans)' } }} />
+      <Toaster
+        position="bottom-right"
+        richColors
+        closeButton
+        expand={false}
+        gap={12}
+        toastOptions={{
+          duration: 3500,
+          classNames: {
+            toast: 'sonner-toast-luxury',
+            title: 'sonner-title',
+            description: 'sonner-description',
+            closeButton: 'sonner-close',
+          },
+          style: {
+            borderRadius: '16px',
+            fontFamily: 'var(--font-sans)',
+            fontSize: '13px',
+            padding: '14px 16px',
+            border: '1px solid rgba(0,0,0,0.07)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06)',
+            background: 'rgba(255,255,255,0.96)',
+            backdropFilter: 'blur(16px)',
+            minWidth: '300px',
+          },
+        }}
+      />
       <ScrollProgress route={route} />
       <Header />
       {selectedProduct ? (

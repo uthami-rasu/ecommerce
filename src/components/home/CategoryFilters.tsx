@@ -14,9 +14,11 @@ export function CategoryFilters({
   categories = productCategories,
   onChange,
 }: CategoryFiltersProps) {
+  const allCategories: Filter[] = ['All', ...categories]
+
   return (
     <div className="flex flex-wrap items-center justify-center gap-2" aria-label="Product categories">
-      {categories.map((category) => {
+      {allCategories.map((category) => {
         const isActive = activeFilter === category
 
         return (
