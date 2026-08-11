@@ -87,13 +87,10 @@ export function ProductDetailPage({ product, products }: ProductDetailPageProps)
   const [selectedWeight, setSelectedWeight] = useState(product.size)
   const [quantity, setQuantity] = useState(1)
   const [tab, setTab] = useState<'description' | 'reviews'>('description')
-  const [notice, setNotice] = useState<string | null>(null)
-
   const gallery = useMemo(() => [product.image, ...products.filter((item) => item.id !== product.id).slice(0, 3).map((item) => item.image)], [product, products])
   const similar = products.filter((item) => item.id !== product.id).slice(0, 4)
   const discount = product.compareAtPrice ? Math.round((1 - product.price / product.compareAtPrice) * 100) : 0
   const weights = Array.from(new Set([product.size, '200g', '250g', '300g', '350g', '400g']))
-  const flash = (message: string) => { setNotice(message); window.setTimeout(() => setNotice(null), 2200) }
 
   return (
     <main className="product-detail-page" id="product-detail">
@@ -124,7 +121,6 @@ export function ProductDetailPage({ product, products }: ProductDetailPageProps)
 
         <section className="similar-section"><div className="similar-heading"><div><span><PackageCheck size={14} /> Curated for you</span><h2>Similar Items You Might Also Like</h2></div><a href="#honey">View all honey <ChevronRight size={14} /></a></div><div className="similar-products">{similar.map((item) => <SimilarProduct key={item.id} product={item} />)}</div></section>
       </div>
-      {notice && <div className="catalog-toast" role="status"><span className="grid size-7 place-items-center rounded-full bg-[#dbe8c9] text-[#416b38]"><Check size={14} /></span>{notice}</div>}
       <Footer />
     </main>
   )

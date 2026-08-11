@@ -11,6 +11,11 @@ export function useLenis() {
       lerp: 0.08,
     })
 
-    return () => lenis.destroy()
+    ;(window as any).lenis = lenis
+
+    return () => {
+      ;(window as any).lenis = null
+      lenis.destroy()
+    }
   }, [])
 }

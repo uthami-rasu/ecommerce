@@ -22,11 +22,26 @@ function App() {
   useEffect(() => {
     const handleRoute = () => {
       setRoute(window.location.hash)
-      window.scrollTo({ top: 0, behavior: 'instant' })
     }
     window.addEventListener('hashchange', handleRoute)
     return () => window.removeEventListener('hashchange', handleRoute)
   }, [])
+
+  useEffect(() => {
+    const scrollToTop = () => {
+      const lenis = (window as any).lenis
+      if (lenis && typeof lenis.scrollTo === 'function') {
+        lenis.scrollTo(0, { immediate: true })
+      }
+      window.scrollTo(0, 0)
+      document.documentElement.scrollTop = 0
+      document.body.scrollTop = 0
+    }
+
+    scrollToTop()
+    const timer = setTimeout(scrollToTop, 50)
+    return () => clearTimeout(timer)
+  }, [route])
 
   const productSlug = route.startsWith('#product/') ? decodeURIComponent(route.slice('#product/'.length)) : null
   const selectedProduct = productSlug ? honeyProducts.find((product) => product.slug === productSlug) : undefined
@@ -34,7 +49,7 @@ function App() {
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900 transition-colors duration-300 dark:bg-stone-950 dark:text-stone-50">
       <Toaster position="top-right" richColors closeButton toastOptions={{ style: { borderRadius: '12px', fontFamily: 'var(--font-sans)' } }} />
-      <ScrollProgress />
+      <ScrollProgress route={route} />
       <Header />
       {selectedProduct ? (
         <ProductDetailPage product={selectedProduct} products={honeyProducts} />

@@ -1,5 +1,5 @@
 import { toast } from 'sonner'
-import { Check, ChevronRight, Heart, Minus, Plus, ShoppingBag, Tag, Trash2 } from 'lucide-react'
+import { Check, Heart, Minus, Plus, ShoppingBag, Tag, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useAppDispatch, useAppSelector } from '../app/hooks'
 import { addToCart, placeOrder, removeFromCart, setCartQuantity, toggleWishlist } from '../features/commerce/commerceSlice'
@@ -376,56 +376,112 @@ export function WishlistPage({ products }: CommerceProps) {
   const wishlist = useAppSelector((state) => state.commerce.wishlist)
   const dispatch = useAppDispatch()
   const wishedProducts = wishlist.map((id) => products.find((product) => product.id === id)).filter((product): product is HoneyProduct => Boolean(product))
+
+  const addAllToCart = () => {
+    wishedProducts.forEach((p) => {
+      dispatch(addToCart({ productId: p.id, quantity: 1, weight: p.size }))
+    })
+    toast.success('All items added to cart! 🛒', { description: `${wishedProducts.length} items moved to your shopping bag.` })
+  }
+
   return (
-    <main className="commerce-page wishlist-page relative overflow-hidden">
+    <main className="commerce-page wishlist-page relative overflow-hidden bg-stone-50/50 dark:bg-stone-950">
       <NutDecorations />
-      <div className="commerce-wrap relative z-10">
-        <div className="wishlist-heading">
-          <span><Heart size={17} fill="currentColor" /> Your collection</span>
-          <h1>Saved favourites</h1>
-          <p>The jars you loved, gathered in one place.</p>
+      <div className="commerce-wrap relative z-10 mx-auto max-w-[1240px] px-5 py-12 sm:px-8">
+        <div className="wishlist-heading text-center max-w-2xl mx-auto mb-12">
+          <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest bg-amber-50 dark:bg-stone-900 text-amber-700 dark:text-amber-400 border border-amber-200/60 dark:border-amber-800/40 shadow-sm">
+            <Heart size={14} className="text-amber-600 fill-amber-600" /> Your Private Collection
+          </span>
+          <h1 className="mt-4 font-display text-4xl sm:text-5xl font-bold text-[#173f32] dark:text-stone-100 tracking-tight">
+            Saved Favourites
+          </h1>
+          <p className="mt-3 text-stone-600 dark:text-stone-400 text-sm sm:text-base">
+            The rare jars and artisan honey varieties you loved, ready for your kitchen shelf.
+          </p>
+          {wishedProducts.length > 0 && (
+            <div className="mt-6 flex justify-center gap-4">
+              <button
+                type="button"
+                onClick={addAllToCart}
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-[#173f32] hover:bg-[#205443] text-white text-xs font-bold uppercase tracking-wider shadow-md transition-all hover:scale-[1.02]"
+              >
+                <ShoppingBag size={15} /> Add All ({wishedProducts.length}) to Cart
+              </button>
+            </div>
+          )}
         </div>
+
         {wishedProducts.length === 0 ? (
-          <div className="empty-cart">
-            <Heart size={34} />
-            <h2>Your wishlist is empty</h2>
-            <p>Save a honey using the heart icon and it will appear here.</p>
-            <a href="#honey">Explore honey</a>
+          <div className="empty-cart text-center py-20 px-6 max-w-md mx-auto bg-white/80 dark:bg-stone-900/80 backdrop-blur-md rounded-3xl border border-stone-200/80 dark:border-stone-800 shadow-xl">
+            <div className="size-20 mx-auto mb-6 grid place-items-center rounded-full bg-amber-50 dark:bg-stone-800 text-amber-600 shadow-inner">
+              <Heart size={36} className="text-amber-500 animate-pulse" />
+            </div>
+            <h2 className="font-display text-2xl font-bold text-stone-900 dark:text-stone-100">Your collection is empty</h2>
+            <p className="mt-2 text-sm text-stone-500 dark:text-stone-400">
+              Save your favourite honey varieties using the heart button while browsing our catalog.
+            </p>
+            <a
+              href="#honey"
+              className="mt-6 inline-flex items-center gap-2 px-7 py-3 rounded-full bg-[#173f32] text-white text-xs font-bold uppercase tracking-wider shadow-lg hover:bg-[#225746] transition"
+            >
+              Explore Honey Room
+            </a>
           </div>
         ) : (
-          <div className="wishlist-grid">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-7">
             {wishedProducts.map((product) => (
-              <article className="wishlist-card" key={product.id}>
-                <a className="wishlist-image" href={`#product/${product.slug}`}>
-                  <img src={product.image} alt={product.name} />
-                  <span>{product.category}</span>
-                </a>
-                <button
-                  className="wishlist-remove"
-                  type="button"
-                  onClick={() => {
-                    dispatch(toggleWishlist(product.id))
-                    toast.info('Item removed from wishlist')
-                  }}
-                  aria-label={`Remove ${product.name} from wishlist`}
-                >
-                  <Heart size={17} fill="currentColor" />
-                </button>
-                <div>
-                  <small>{product.origin} · {product.size}</small>
-                  <a href={`#product/${product.slug}`}>
-                    <h2>{product.name}</h2>
+              <article
+                className="group relative flex flex-col overflow-hidden rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800/80 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+                key={product.id}
+              >
+                <div className="relative aspect-[4/3] overflow-hidden bg-stone-100 dark:bg-stone-800">
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    className="size-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  />
+                  <span className="absolute top-3 left-3 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-white/90 dark:bg-stone-900/90 text-[#173f32] dark:text-amber-400 backdrop-blur-md shadow-sm">
+                    {product.category}
+                  </span>
+                  <button
+                    className="absolute top-3 right-3 size-9 grid place-items-center rounded-full bg-white/90 dark:bg-stone-900/90 text-rose-500 hover:bg-rose-50 hover:text-rose-600 shadow-md backdrop-blur-md transition-all hover:scale-110"
+                    type="button"
+                    onClick={() => {
+                      dispatch(toggleWishlist(product.id))
+                      toast.info('Removed from wishlist', { description: `${product.name} removed.` })
+                    }}
+                    aria-label={`Remove ${product.name} from wishlist`}
+                  >
+                    <Heart size={16} fill="currentColor" />
+                  </button>
+                </div>
+
+                <div className="flex flex-1 flex-col p-6 text-left">
+                  <div className="flex items-center justify-between text-xs text-stone-500 dark:text-stone-400 mb-2">
+                    <span className="font-semibold">{product.origin}</span>
+                    <span className="px-2 py-0.5 rounded bg-stone-100 dark:bg-stone-800 text-[10px] font-bold uppercase">{product.size}</span>
+                  </div>
+
+                  <a href={`#product/${product.slug}`} className="group-hover:text-amber-700 transition-colors">
+                    <h2 className="font-display text-xl font-bold text-stone-900 dark:text-stone-100">{product.name}</h2>
                   </a>
-                  <p>{product.subtitle}</p>
-                  <footer>
-                    <strong>{money(product.price)}</strong>
-                    <button type="button" onClick={() => {
-                      dispatch(addToCart({ productId: product.id, quantity: 1, weight: product.size }))
-                      toast.success('Added to cart!', { description: `${product.name} added to your bag.` })
-                    }}>
-                      <ShoppingBag size={14} /> Add to cart
+                  <p className="mt-1 text-xs text-stone-500 dark:text-stone-400 line-clamp-2">{product.subtitle}</p>
+
+                  <div className="mt-auto pt-5 flex items-center justify-between border-t border-stone-100 dark:border-stone-800">
+                    <span className="font-display text-2xl font-bold text-[#173f32] dark:text-amber-400">
+                      {money(product.price)}
+                    </span>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#173f32] hover:bg-[#235847] text-white text-xs font-bold transition shadow-sm"
+                      onClick={() => {
+                        dispatch(addToCart({ productId: product.id, quantity: 1, weight: product.size }))
+                        toast.success('Added to cart! 🛒', { description: `${product.name} (${product.size}) added.` })
+                      }}
+                    >
+                      <ShoppingBag size={14} /> Add to Cart
                     </button>
-                  </footer>
+                  </div>
                 </div>
               </article>
             ))}

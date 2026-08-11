@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import ovalImage from '../../assets/images/Component 1.png'
+import ovalImage from '../../assets/images/Component 1.webp'
 import { testimonials } from '../../constants/testimonials'
 import type { Testimonial } from '../../types/testimonial'
 import { TestimonialThumbnail } from './TestimonialThumbnail'

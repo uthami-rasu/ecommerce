@@ -1,4 +1,4 @@
-import bosscoLogo from '../../assets/images/Bossco_Logo__2__page-0001-removebg-preview.png'
+import bosscoLogo from '../../assets/images/Bossco_Logo__2__page-0001-removebg-preview.webp'
 import { FacebookIcon, InstagramIcon, WhatsAppIcon } from '../ui/SocialIcons'
 
 const socialLinks = [

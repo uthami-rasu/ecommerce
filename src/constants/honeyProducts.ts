@@ -1,10 +1,10 @@
 import type { HoneyProduct } from '../types/catalog'
-import honeyTrio from '../assets/images/8773eeca3cba18ea1f474f415ed58dd51b2c77ee.png'
-import honeyGift from '../assets/images/ChatGPT Image Jun 10, 2026, 11_08_40 AM 1.png'
-import meloraHoney from '../assets/images/3719332c70605ffb0114496075fad17a1e6ecb5c.jpg'
-import forestHoney from '../assets/category/553672e3cda4d62fbb1c7965d98b61135fe083c3.jpg'
-import combHoney from '../assets/category/ad0871d505385543f74adf1e567c5dca11365121.jpg'
-import honeyCollection from '../assets/category/9282672b5437c3df697468cc9de9bce23693c139.jpg'
+import honeyTrio from '../assets/images/8773eeca3cba18ea1f474f415ed58dd51b2c77ee.webp'
+import honeyGift from '../assets/images/ChatGPT Image Jun 10, 2026, 11_08_40 AM 1.webp'
+import meloraHoney from '../assets/images/3719332c70605ffb0114496075fad17a1e6ecb5c.webp'
+import forestHoney from '../assets/category/553672e3cda4d62fbb1c7965d98b61135fe083c3.webp'
+import combHoney from '../assets/category/ad0871d505385543f74adf1e567c5dca11365121.webp'
+import honeyCollection from '../assets/category/9282672b5437c3df697468cc9de9bce23693c139.webp'
 
 // This module is the API seam: replace this export with your query result and
 // pass it into <CategoryPage products={data.products} /> without changing the UI.

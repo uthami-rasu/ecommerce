@@ -12,6 +12,7 @@ import { useAppDispatch, useAppSelector } from '../app/hooks'
 import { addToCart, toggleWishlist } from '../features/commerce/commerceSlice'
 import { StatsBand } from '../components/home/StatsBand'
 import { NewsletterSection } from '../components/home/NewsletterSection'
+import categoryHeroBg from '../assets/category/image copy.webp'
 
 type CategoryPageProps = { products?: HoneyProduct[] }
 type ViewMode = 'grid' | 'list'
@@ -154,7 +155,6 @@ export function CategoryPage({ products = honeyProducts }: CategoryPageProps) {
   const dispatch = useAppDispatch()
   const wished = useAppSelector((state) => state.commerce.wishlist)
   const [filterOpen, setFilterOpen] = useState(false)
-  const [notice, setNotice] = useState<string | null>(null)
   const applyTimer = useRef<number | null>(null)
 
   useEffect(() => () => {
@@ -166,8 +166,6 @@ export function CategoryPage({ products = honeyProducts }: CategoryPageProps) {
     const result = products.filter((product) => (!query || `${product.name} ${product.subtitle} ${product.origin} ${product.category}`.toLocaleLowerCase().includes(query)) && (appliedFilters.category === 'All honey' || product.category === appliedFilters.category) && product.price <= appliedFilters.maxPrice && product.rating >= appliedFilters.minRating && (!appliedFilters.selectedSizes.length || appliedFilters.selectedSizes.includes(product.size)))
     return [...result].sort((a, b) => sort === 'price-low' ? a.price - b.price : sort === 'price-high' ? b.price - a.price : sort === 'rating' ? b.rating - a.rating : sort === 'newest' ? b.id.localeCompare(a.id) : Number(Boolean(b.badge)) - Number(Boolean(a.badge)))
   }, [products, appliedFilters, sort])
-
-  const flash = (message: string) => { setNotice(message); window.setTimeout(() => setNotice(null), 2400) }
   const clear = () => {
     if (applyTimer.current) window.clearTimeout(applyTimer.current)
     applyTimer.current = null
@@ -197,7 +195,7 @@ export function CategoryPage({ products = honeyProducts }: CategoryPageProps) {
   return (
     <main id="home">
       <section className="category-hero">
-        <div className="category-hero-image" aria-hidden="true" />
+        <div className="category-hero-image" style={{ backgroundImage: `url("${categoryHeroBg}")` }} aria-hidden="true" />
         <div className="category-hero-glow" aria-hidden="true" />
         <div className="relative z-10 mx-auto flex min-h-[430px] max-w-[1440px] items-center px-5 py-16 sm:px-8 lg:px-14">
           <div className="max-w-[660px] category-hero-copy">
@@ -267,7 +265,6 @@ export function CategoryPage({ products = honeyProducts }: CategoryPageProps) {
       <NewsletterSection />
 
       {filterOpen && <div className="filter-drawer-backdrop" role="presentation" onClick={() => setFilterOpen(false)}><aside className="filter-drawer" role="dialog" aria-modal="true" aria-label="Product filters" onClick={(event) => event.stopPropagation()}><div className="mb-4 flex items-center justify-between"><b className="font-display text-2xl text-[#193f32]">Refine your harvest</b><button className="icon-button" type="button" onClick={() => setFilterOpen(false)} aria-label="Close filters"><X size={19} /></button></div><FilterPanel idPrefix="mobile" {...{ search, setSearch, category, setCategory, maxPrice, setMaxPrice, selectedSizes, toggleSize, minRating, setMinRating, clear, onApply: applyFilters, isLoading }} /></aside></div>}
-      {notice && <div className="catalog-toast" role="status"><span className="grid size-7 place-items-center rounded-full bg-[#dbe8c9] text-[#416b38]"><Check size={14} /></span>{notice}</div>}
       <Footer />
     </main>
   )

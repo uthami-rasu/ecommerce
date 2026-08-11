@@ -1,5 +1,6 @@
-import leftNuts from '../../assets/images/ab48ed1fb8c87befc3434564f5ff773a6d764dac.png'
-import rightNuts from '../../assets/images/ab48ed1fb8c87befc3434564f5ff773a6d764dac (1).png'
+import { toast } from 'sonner'
+import leftNuts from '../../assets/images/ab48ed1fb8c87befc3434564f5ff773a6d764dac.webp'
+import rightNuts from '../../assets/images/ab48ed1fb8c87befc3434564f5ff773a6d764dac (1).webp'
 
 export function NewsletterSection() {
   return (
@@ -28,7 +29,10 @@ export function NewsletterSection() {
           <p className="mx-auto mt-4 max-w-lg text-sm text-white/85">Get first bites of new launches, seasonal bundles and members-only offers.</p>
           <form
             className="mx-auto mt-7 flex max-w-[560px] flex-col gap-3 sm:flex-row"
-            onSubmit={(event) => event.preventDefault()}
+            onSubmit={(event) => {
+              event.preventDefault()
+              toast.success('Subscribed to newsletter! 📩', { description: 'Thank you for joining the Bossco family.' })
+            }}
           >
             <label className="sr-only" htmlFor="newsletter-email">
               Email address

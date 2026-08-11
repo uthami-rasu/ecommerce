@@ -1,4 +1,4 @@
-import heroImage from '../../assets/images/ChatGPT Image Jun 10, 2026, 11_08_40 AM 1.png'
+import heroImage from '../../assets/images/ChatGPT Image Jun 10, 2026, 11_08_40 AM 1.webp'
 import { ArrowDown, ShieldCheck, Sparkles, Truck } from 'lucide-react'
 import { ActionLink } from '../ui/ActionLink'
 

@@ -13,7 +13,8 @@ type ProductCardProps = {
 
 export function ProductCard({ product, index = 0 }: ProductCardProps) {
   const dispatch = useAppDispatch()
-  const isLiked = useAppSelector((state) => state.commerce.wishlist.includes(product.id))
+  const productId = String(product.id)
+  const isLiked = useAppSelector((state) => state.commerce.wishlist.includes(productId))
   const [isAdded, setIsAdded] = useState(false)
 
   return (
@@ -30,7 +31,7 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
         <button
           className={`product-fav ${isLiked ? 'is-liked' : ''}`}
           onClick={() => {
-            dispatch(toggleWishlist(product.id))
+            dispatch(toggleWishlist(productId))
             if (isLiked) {
               toast.info('Removed from Wishlist', { description: `${product.name} removed.` })
             } else {
@@ -62,7 +63,7 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
               className={`product-add ${isAdded ? 'is-added' : ''}`}
               type="button"
               onClick={() => {
-                dispatch(addToCart({ productId: product.id, quantity: 1, weight: product.weight || '250g' }))
+                dispatch(addToCart({ productId, quantity: 1, weight: product.weight || '250g' }))
                 setIsAdded(true)
                 toast.success('Added to Cart! 🛒', { description: `${product.name} (${product.weight || '250g'}) added to your cart.` })
                 window.setTimeout(() => setIsAdded(false), 1600)

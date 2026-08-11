@@ -1,5 +1,5 @@
 import { toast } from 'sonner'
-import { Camera, Edit3, Heart, LogOut, MapPin, Package, User, Plus, X, ShoppingBag } from 'lucide-react'
+import { Camera, Edit3, X } from 'lucide-react'
 import { useState } from 'react'
 import { NutDecorations } from '../components/home/NutDecorations'
 import type { HoneyProduct } from '../types/catalog'
@@ -17,7 +17,7 @@ function money(value: number) {
 export function MyAccountPage({ products }: MyAccountProps) {
   const [activeTab, setActiveTab] = useState<'account' | 'address' | 'orders' | 'wishlist'>('account')
   const dispatch = useAppDispatch()
-  const { wishlist, ordersHistory } = useAppSelector((state) => state.commerce)
+  const { wishlist } = useAppSelector((state) => state.commerce)
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -38,12 +38,12 @@ export function MyAccountPage({ products }: MyAccountProps) {
     setTimeout(() => setSaveSuccess(false), 3000)
   }
 
-  // Fallback mock orders matching screenshot if none placed yet
-  const displayOrders = ordersHistory && ordersHistory.length > 0 ? ordersHistory : [
-    { id: '1', date: 'October 17, 2023', total: 1234.00, itemsCount: 2, status: 'Delivered', product: products[0] || { name: 'Almonds', image: 'https://images.unsplash.com/photo-1508061253366-f7da158b6d46?auto=format&fit=crop&w=300&q=80', weight: '250 gm' } },
-    { id: '2', date: 'October 17, 2023', total: 1234.00, itemsCount: 1, status: 'Delivered', product: products[1] || { name: 'Almonds', image: 'https://images.unsplash.com/photo-1508061253366-f7da158b6d46?auto=format&fit=crop&w=300&q=80', weight: '250 gm' } },
-    { id: '3', date: 'October 17, 2023', total: 1234.00, itemsCount: 3, status: 'Delivered', product: products[2] || { name: 'Almonds', image: 'https://images.unsplash.com/photo-1508061253366-f7da158b6d46?auto=format&fit=crop&w=300&q=80', weight: '250 gm' } },
-    { id: '4', date: 'October 17, 2023', total: 1234.00, itemsCount: 1, status: 'Delivered', product: products[0] || { name: 'Almonds', image: 'https://images.unsplash.com/photo-1508061253366-f7da158b6d46?auto=format&fit=crop&w=300&q=80', weight: '250 gm' } },
+  // Fallback mock orders matching screenshot
+  const displayOrders = [
+    { id: '1', date: 'October 17, 2023', total: 1234.00, itemsCount: 2, status: 'Delivered', product: products[0] || { name: 'Almonds', image: 'https://images.unsplash.com/photo-1508061253366-f7da158b6d46?auto=format&fit=crop&w=300&q=80', size: '250 gm' } },
+    { id: '2', date: 'October 17, 2023', total: 1234.00, itemsCount: 1, status: 'Delivered', product: products[1] || { name: 'Almonds', image: 'https://images.unsplash.com/photo-1508061253366-f7da158b6d46?auto=format&fit=crop&w=300&q=80', size: '250 gm' } },
+    { id: '3', date: 'October 17, 2023', total: 1234.00, itemsCount: 3, status: 'Delivered', product: products[2] || { name: 'Almonds', image: 'https://images.unsplash.com/photo-1508061253366-f7da158b6d46?auto=format&fit=crop&w=300&q=80', size: '250 gm' } },
+    { id: '4', date: 'October 17, 2023', total: 1234.00, itemsCount: 1, status: 'Delivered', product: products[0] || { name: 'Almonds', image: 'https://images.unsplash.com/photo-1508061253366-f7da158b6d46?auto=format&fit=crop&w=300&q=80', size: '250 gm' } },
   ]
 
   const wishedProducts = wishlist

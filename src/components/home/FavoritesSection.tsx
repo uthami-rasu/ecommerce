@@ -5,8 +5,8 @@ import { CategoryFilters } from './CategoryFilters'
 import { ProductGrid } from './ProductGrid'
 import { useRef } from 'react'
 import { useSectionParallax } from '../../hooks/useSectionParallax'
-import leftNuts from '../../assets/images/ChatGPT Image Jun 12, 2026, 04_05_10 PM 4.png'
-import rightNuts from '../../assets/images/ChatGPT Image Jun 12, 2026, 04_05_10 PM 3.png'
+import leftNuts from '../../assets/images/ChatGPT Image Jun 12, 2026, 04_05_10 PM 4.webp'
+import rightNuts from '../../assets/images/ChatGPT Image Jun 12, 2026, 04_05_10 PM 3.webp'
 
 type Filter = 'All' | ProductCategory
 
@@ -29,14 +29,16 @@ export function FavoritesSection() {
       <div className="favorites-orbit favorites-orbit-one" aria-hidden="true" />
       <div className="favorites-orbit favorites-orbit-two" aria-hidden="true" />
       <div className="favorites-depth-content">
-        <div className="mx-auto max-w-2xl" data-reveal>
-          <p className="eyebrow">Shop by mood</p>
-          <h2 className="mt-2 font-display text-[clamp(2.6rem,5vw,4.5rem)] font-bold leading-none tracking-[-0.04em] text-stone-700 dark:text-stone-100">
-            Everyday favourites
+        <div className="mx-auto max-w-2xl text-center" data-reveal>
+          <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800/40 shadow-sm mb-3">
+            ✨ Hand-curated Selection
+          </span>
+          <h2 className="font-display text-[clamp(2.6rem,5vw,4.5rem)] font-bold leading-none tracking-[-0.04em] text-[#173f32] dark:text-stone-100">
+            Everyday Favourites
           </h2>
-          <span className="mx-auto mt-2 block h-px w-36 bg-gradient-to-r from-transparent via-[#dfa55f] to-transparent" />
-          <p className="mt-3 text-sm text-stone-500 dark:text-stone-400">
-            From desk-drawer snacks to thoughtful gifts—find a better bite for every moment.
+          <span className="mx-auto mt-3 block h-1 w-24 rounded-full bg-gradient-to-r from-amber-300 via-amber-500 to-amber-300 shadow-[0_0_10px_#f59e0b]" />
+          <p className="mt-4 text-stone-600 dark:text-stone-300 text-sm sm:text-base leading-relaxed">
+            From desk-drawer artisan jars to thoughtful luxury gift sets—find a better taste for every special moment.
           </p>
         </div>
 

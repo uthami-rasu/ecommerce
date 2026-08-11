@@ -1,6 +1,6 @@
-import bannerImage from '../../assets/images/2507043fbfc4380fcfdea3c81abf8ab643a6c6b5.png'
-import rightNuts from '../../assets/images/ChatGPT Image Jun 12, 2026, 04_05_10 PM 3.png'
-import leftNuts from '../../assets/images/ChatGPT Image Jun 12, 2026, 04_05_10 PM 4.png'
+import bannerImage from '../../assets/images/2507043fbfc4380fcfdea3c81abf8ab643a6c6b5.webp'
+import rightNuts from '../../assets/images/ChatGPT Image Jun 12, 2026, 04_05_10 PM 3.webp'
+import leftNuts from '../../assets/images/ChatGPT Image Jun 12, 2026, 04_05_10 PM 4.webp'
 import { ActionLink } from '../ui/ActionLink'
 
 export function HamperBanner() {

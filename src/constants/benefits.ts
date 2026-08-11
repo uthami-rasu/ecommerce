@@ -1,7 +1,7 @@
-import deliveryIcon from '../assets/images/svg.png'
-import returnIcon from '../assets/images/Frame.png'
-import organicIcon from '../assets/images/Frame (1).png'
-import supportIcon from '../assets/images/Frame (2).png'
+import deliveryIcon from '../assets/images/svg.webp'
+import returnIcon from '../assets/images/Frame.webp'
+import organicIcon from '../assets/images/Frame (1).webp'
+import supportIcon from '../assets/images/Frame (2).webp'
 
 export const benefits = [
   {

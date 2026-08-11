@@ -2,9 +2,9 @@ import { toast } from 'sonner'
 import { ArrowUpRight, Check, Plus, Sparkles, Star } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { trendingProducts } from '../../constants/trendingProducts'
-import pistachioPhoto from '../../assets/images/unsplash-pistachio.jpg'
-import mixedNutsPhoto from '../../assets/images/unsplash-cashew.jpg'
-import almondPhoto from '../../assets/images/unsplash-almond.jpg'
+import pistachioPhoto from '../../assets/images/unsplash-pistachio.webp'
+import mixedNutsPhoto from '../../assets/images/unsplash-cashew.webp'
+import almondPhoto from '../../assets/images/unsplash-almond.webp'
 import { useAppDispatch } from '../../app/hooks'
 import { addToCart } from '../../features/commerce/commerceSlice'
 
@@ -70,7 +70,7 @@ export function TrendingSection() {
   }, [])
 
   const addFeatured = () => {
-    dispatch(addToCart({ productId: activeProduct.id, quantity: 1, weight: activeProduct.weight || '250g' }))
+    dispatch(addToCart({ productId: String(activeProduct.id), quantity: 1, weight: '250g' }))
     setIsAdded(true)
     toast.success('Added to Bag! 🛒', { description: `${activeProduct.name} added to your cart.` })
     window.setTimeout(() => setIsAdded(false), 1600)

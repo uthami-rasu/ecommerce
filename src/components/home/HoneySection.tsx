@@ -1,4 +1,4 @@
-import honeyImage from '../../assets/images/8773eeca3cba18ea1f474f415ed58dd51b2c77ee.png'
+import honeyImage from '../../assets/images/8773eeca3cba18ea1f474f415ed58dd51b2c77ee.webp'
 import {
   leftHoneyBenefits,
   rightHoneyBenefits,
@@ -8,9 +8,9 @@ import { HoneyBenefitColumn } from './HoneyBenefitColumn'
 import { NatureFlyer } from './NatureFlyer'
 import { useRef } from 'react'
 import { useSectionParallax } from '../../hooks/useSectionParallax'
-import beeImage from '../../assets/images/nature-bee-3d.png'
-import butterflyImage from '../../assets/images/nature-butterfly-3d.png'
-import botanicalImage from '../../assets/images/nature-botanical-3d.png'
+import beeImage from '../../assets/images/nature-bee-3d.webp'
+import butterflyImage from '../../assets/images/nature-butterfly-3d.webp'
+import botanicalImage from '../../assets/images/nature-botanical-3d.webp'
 
 export function HoneySection() {
   const sectionRef = useRef<HTMLElement>(null)
