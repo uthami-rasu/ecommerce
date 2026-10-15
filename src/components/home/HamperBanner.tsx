@@ -35,7 +35,7 @@ export function HamperBanner() {
             Your Loved Ones!
           </h2>
           <div className="mt-7 flex justify-center">
-            <ActionLink href="#favorites" showArrow={false}>
+            <ActionLink href="#shop/dry-fruits-nuts" showArrow={false}>
               Shop Now
             </ActionLink>
           </div>

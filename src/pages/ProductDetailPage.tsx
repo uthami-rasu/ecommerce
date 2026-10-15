@@ -1,127 +1,230 @@
+import { useEffect, useState, type KeyboardEvent } from 'react'
 import { toast } from 'sonner'
-import { useMemo, useState } from 'react'
-import {
-  ArrowLeft, Check, ChevronLeft, ChevronRight, Heart, ImagePlus, Minus, PackageCheck, Plus, RotateCcw,
-  Share2, ShoppingBag, Star, ThumbsUp, Truck,
-} from 'lucide-react'
+import { AlertTriangle, ArrowLeft, Check, Heart, Loader2, PackageCheck, Share2, ShoppingBag, Truck } from 'lucide-react'
 import { Footer } from '../components/layout/Footer'
-import type { HoneyProduct } from '../types/catalog'
-import { useAppDispatch, useAppSelector } from '../app/hooks'
-import { addToCart, toggleWishlist } from '../features/commerce/commerceSlice'
+import { discountOf } from '../components/catalog/catalogFormat'
+import { findCategory, themeOf } from '../components/catalog/categoryTree'
+import { RatingStars } from '../components/catalog/RatingStars'
+import { defaultVariantOf } from '../components/catalog/useQuickAdd'
+import { ProductGallery } from '../components/product/ProductGallery'
+import { ProductDetailSkeleton, ProductLoadError, ProductNotFound } from '../components/product/ProductDetailStates'
+import { QuantityStepper } from '../components/product/QuantityStepper'
+import { ReviewsPanel } from '../components/product/ReviewsPanel'
+import { SimilarProducts } from '../components/product/SimilarProducts'
+import { VariantSelector } from '../components/product/VariantSelector'
+import { useGetCategoriesQuery, useGetProductQuery } from '../features/catalog/catalogApi'
+import { useCart } from '../hooks/useCart'
+import { useRoute } from '../hooks/useRoute'
+import { useWishlist } from '../hooks/useWishlist'
+import { errorMessage, isApiError } from '../lib/http/apiClient'
+import type { ProductDetail } from '../types/api'
+import { formatMoney } from '../utils/format'
+import '../styles/catalog.css'
 
-type ProductDetailPageProps = { product: HoneyProduct; products: HoneyProduct[] }
+const FREE_DELIVERY_OVER = 999
+const MAX_QUANTITY = 20
 
-const benefits = [
-  'Raw and gently filtered to retain its naturally occurring aroma and character.',
-  'Never overheated, preserving the flavour of the original seasonal harvest.',
-  'Collected in limited batches from traceable forest and meadow locations.',
-  'Contains no artificial flavouring, added colour or refined sugar.',
-  'Packed in glass to protect freshness and reduce unnecessary plastic.',
-]
+type Tab = 'description' | 'reviews'
 
-const productDetails = [
-  'Natural honey may crystallise over time; place the jar in warm water to liquefy.',
-  'Not suitable for infants under 12 months of age.',
-]
+const CARE_NOTES = {
+  honey: [
+    'Natural honey may crystallise over time; stand the jar in warm water to liquefy.',
+    'Store sealed in a cool, dry place away from direct sunlight.',
+    'Not suitable for infants under 12 months of age.',
+  ],
+  'dry-fruits': [
+    'Store in an airtight container in a cool, dry place once opened.',
+    'Refrigerate in humid weather to keep every bite crunchy.',
+    'Packed in facilities that also handle nuts, sesame and dairy.',
+  ],
+  all: ['Store in a cool, dry place away from direct sunlight.'],
+} as const
 
-const moreDetails = [
-  'Store sealed in a cool, dry place away from direct sunlight.',
-  'Colour and flavour naturally vary from one harvest to the next.',
-  'Packed and quality checked in small batches.',
-  'Batch reference: BOS-HNY-2026.',
-]
+const paragraphsOf = (text: string | null) => (text ?? '').split(/\n{2,}|\r?\n/).map((part) => part.trim()).filter(Boolean)
 
-function money(value: number) {
-  return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value)
+async function shareProduct(product: ProductDetail) {
+  const url = window.location.href.split('?')[0]
+  const data = { title: product.name, text: product.subtitle ?? `${product.name} from Bossco`, url }
+  if (navigator.share) {
+    try {
+      await navigator.share(data)
+      return
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') return
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(url)
+    toast.success('Link copied', { description: 'Share it with someone who loves good food.' })
+  } catch {
+    toast.error('Could not copy the link', { description: url })
+  }
 }
 
-function DetailRating({ product }: { product: HoneyProduct }) {
-  return <span className="detail-rating"><span>{Array.from({ length: 5 }, (_, index) => <Star key={index} size={12} fill="currentColor" />)}</span><b>{product.rating}</b><small>({product.reviews} reviews)</small></span>
-}
+export function ProductDetailPage({ slug }: { slug: string }) {
+  const route = useRoute()
+  const wantsReview = route.query.get('review') === '1'
+  const { data: product, error, isError, refetch } = useGetProductQuery(slug)
 
-function SimilarProduct({ product }: { product: HoneyProduct }) {
-  const dispatch = useAppDispatch()
-  return (
-    <article className="similar-product">
-      <a className="similar-product-image" href={`#product/${product.slug}`}><img src={product.image} alt={product.name} /></a>
-      <span className="similar-category">{product.category}</span>
-      <button type="button" onClick={() => dispatch(addToCart({ productId: product.id, quantity: 1, weight: product.size }))} aria-label={`Add ${product.name} to cart`}><Plus size={16} /></button>
-      <a href={`#product/${product.slug}`}><strong>{product.name}</strong><small>{product.size}</small><b>{money(product.price)}</b></a>
-    </article>
-  )
-}
-
-const reviews = [
-  { initials: 'AT', name: 'Anita Thomas', date: '3 days ago', title: 'Beautiful flavour and freshness', content: 'The aroma is wonderfully floral and the honey tastes genuinely fresh. The glass jar and careful packaging also make it feel very premium.', rating: 5 },
-  { initials: 'RK', name: 'Rohan Kapoor', date: '2 weeks ago', title: 'A lovely everyday honey', content: 'Smooth, balanced and not overwhelmingly sweet. It has become our favourite for breakfast and evening tea.', rating: 5 },
-]
-
-function ReviewsPanel({ product, onSubmit }: { product: HoneyProduct; onSubmit: () => void }) {
-  const [reviewRating, setReviewRating] = useState(5)
-  return (
-    <div className="reviews-panel">
-      <h2>Customer Feedback</h2>
-      <div className="review-summary">
-        <div className="review-score"><strong>{product.rating}</strong><span>{Array.from({ length: 5 }, (_, index) => <Star key={index} size={15} fill="currentColor" />)}</span><small>Product rating</small></div>
-        <div className="rating-bars">{[70, 15, 10, 3, 2].map((percent, index) => <div key={percent}><span className="bar-track"><i style={{ width: `${percent}%` }} /></span><span className="bar-stars">{Array.from({ length: 5 - index }, (_, star) => <Star key={star} size={10} fill="currentColor" />)}</span><b>{percent}%</b></div>)}</div>
-      </div>
-      <h2 className="review-list-heading">Reviews</h2>
-      <div className="customer-reviews">{reviews.map((review) => <article className="customer-review" key={review.name}><span className="review-avatar">{review.initials}</span><div><header><b>{review.name}</b><small>{review.date}</small></header><span className="review-stars">{Array.from({ length: review.rating }, (_, index) => <Star key={index} size={11} fill="currentColor" />)}</span><h3>{review.title}</h3><p>{review.content}</p><button type="button"><ThumbsUp size={11} /> Helpful</button></div></article>)}</div>
-      <button className="view-reviews" type="button">View all reviews</button>
-      <form className="review-form" onSubmit={(event) => { event.preventDefault(); onSubmit() }}>
-        <h2>Write a Review</h2>
-        <label>What is it like to use this product?</label>
-        <div className="review-rating-input" aria-label={`Selected rating: ${reviewRating} stars`}>{[1, 2, 3, 4, 5].map((rating) => <button type="button" aria-label={`${rating} stars`} key={rating} onClick={() => setReviewRating(rating)}><Star size={18} fill={rating <= reviewRating ? 'currentColor' : 'none'} /></button>)}</div>
-        <label htmlFor="review-title">Review title</label><input id="review-title" required placeholder="A great small-batch honey" />
-        <label htmlFor="review-content">Review content</label><div className="review-textarea"><textarea id="review-content" required placeholder="What did you enjoy about this honey?" /><ImagePlus size={19} /></div>
-        <button className="submit-review" type="submit">Submit review</button>
-      </form>
-    </div>
-  )
-}
-
-export function ProductDetailPage({ product, products }: ProductDetailPageProps) {
-  const dispatch = useAppDispatch()
-  const wished = useAppSelector((state) => state.commerce.wishlist.includes(product.id))
-  const [selectedImage, setSelectedImage] = useState(0)
-  const [selectedWeight, setSelectedWeight] = useState(product.size)
-  const [quantity, setQuantity] = useState(1)
-  const [tab, setTab] = useState<'description' | 'reviews'>('description')
-  const gallery = useMemo(() => [product.image, ...products.filter((item) => item.id !== product.id).slice(0, 3).map((item) => item.image)], [product, products])
-  const similar = products.filter((item) => item.id !== product.id).slice(0, 4)
-  const discount = product.compareAtPrice ? Math.round((1 - product.price / product.compareAtPrice) * 100) : 0
-  const weights = Array.from(new Set([product.size, '200g', '250g', '300g', '350g', '400g']))
+  let content
+  // Keyed on the review intent: a suspended navigation can bring back a hidden, still-mounted
+  // view with its old tab state, so `?review=1` must always start a fresh view.
+  if (product) content = <ProductView key={wantsReview ? 'review' : 'view'} product={product} wantsReview={wantsReview} />
+  else if (isError && isApiError(error) && error.status === 404) content = <ProductNotFound />
+  else if (isError) content = <ProductLoadError message={errorMessage(error)} onRetry={() => refetch()} />
+  else content = <ProductDetailSkeleton />
 
   return (
     <main className="product-detail-page" id="product-detail">
-      <div className="mx-auto max-w-[1280px] px-5 pb-20 pt-8 sm:px-8 lg:px-12 lg:pt-12">
-        <a className="product-back" href="#honey"><ArrowLeft size={16} /> Back to products</a>
-        <nav className="product-breadcrumb" aria-label="Breadcrumb"><a href="#home">Home</a><span>/</span><a href="#honey">Products</a><span>/</span><a href="#honey">Honey varieties</a><span>/</span><b>{product.name}</b></nav>
-
-        <section className="product-detail-top">
-          <div className="product-gallery">
-            <div className="product-main-image"><img src={gallery[selectedImage]} alt={product.name} /><button className={wished ? 'is-active' : ''} type="button" onClick={() => dispatch(toggleWishlist(product.id))} aria-label="Save to wishlist"><Heart size={18} fill={wished ? 'currentColor' : 'none'} /></button></div>
-            <div className="product-thumbnails"><button type="button" aria-label="Previous image" onClick={() => setSelectedImage((selectedImage - 1 + gallery.length) % gallery.length)}><ChevronLeft size={16} /></button>{gallery.map((image, index) => <button className={selectedImage === index ? 'is-active' : ''} type="button" key={`${image}-${index}`} onClick={() => setSelectedImage(index)}><img src={image} alt={`${product.name} view ${index + 1}`} /></button>)}<button type="button" aria-label="Next image" onClick={() => setSelectedImage((selectedImage + 1) % gallery.length)}><ChevronRight size={16} /></button></div>
-          </div>
-
-          <div className="product-purchase-panel">
-            <div className="flex items-start justify-between gap-4"><div><span className="product-overline">{product.category}</span><h1>{product.name}</h1><p>Sourced from the deep forests of {product.origin}, unfiltered and completely natural.</p></div><div className="flex gap-1"><button className="detail-icon-button" type="button" onClick={() => dispatch(toggleWishlist(product.id))} aria-label="Wishlist"><Heart size={15} fill={wished ? 'currentColor' : 'none'} /></button><button className="detail-icon-button" type="button" aria-label="Share"><Share2 size={15} /></button></div></div>
-            <div className="product-price-row"><div><strong>{money(product.price)}</strong>{product.compareAtPrice && <small>{money(product.compareAtPrice)}</small>}</div>{discount > 0 && <span>{discount}% off</span>}<DetailRating product={product} /></div>
-            <dl className="product-meta"><div><dt>SKU</dt><dd>{product.id.toUpperCase()}</dd></div><div><dt>Category</dt><dd><a href="#honey">{product.category}</a></dd></div><div><dt>Availability</dt><dd className="text-[#4f7f46]">In stock</dd></div></dl>
-            <fieldset className="product-weight"><legend>Weight</legend><div>{weights.map((weight) => <label key={weight}><input type="radio" name="weight" value={weight} checked={selectedWeight === weight} onChange={() => setSelectedWeight(weight)} /><span>{weight}</span></label>)}</div></fieldset>
-            <div className="product-buy-row"><div className="quantity-control"><button type="button" onClick={() => setQuantity((value) => Math.max(1, value - 1))} aria-label="Decrease quantity"><Minus size={14} /></button><span>{quantity}</span><button type="button" onClick={() => setQuantity((value) => value + 1)} aria-label="Increase quantity"><Plus size={14} /></button></div><button className="detail-add-cart" type="button" onClick={() => { dispatch(addToCart({ productId: product.id, quantity, weight: selectedWeight })); toast.success('Added to cart!', { description: `${quantity} × ${product.name} (${selectedWeight}) added to your bag.` }) }}><ShoppingBag size={15} /> Add to cart</button></div>
-            <div className="product-service-list"><div><Truck size={19} /><span><b>Free delivery</b><small>Free over ₹999 · Check delivery availability</small></span></div><div><RotateCcw size={19} /><span><b>Return delivery</b><small>Free 30-day delivery return · Details</small></span></div></div>
-          </div>
-        </section>
-
-        <section className="product-information">
-          <div className="product-tabs"><button className={tab === 'description' ? 'is-active' : ''} type="button" onClick={() => setTab('description')}>Description</button><button className={tab === 'reviews' ? 'is-active' : ''} type="button" onClick={() => setTab('reviews')}>Reviews ({product.reviews})</button></div>
-          {tab === 'description' ? <div className="product-copy"><h2>Product Description</h2><p>Gathered in a limited seasonal harvest, {product.name} carries the distinctive character of {product.origin}. Its layered amber sweetness and natural floral finish make it beautiful in tea, over warm toast, paired with cheese or enjoyed directly from the spoon. Each jar is gently filtered and packed without artificial additives.</p><h3>Benefits</h3><ul>{benefits.map((item) => <li key={item}><Check size={14} />{item}</li>)}</ul><h3>Product Details</h3><ul>{productDetails.map((item) => <li key={item}><Check size={14} />{item}</li>)}</ul><h3>More Details</h3><ul>{moreDetails.map((item) => <li key={item}><Check size={14} />{item}</li>)}</ul></div> : <ReviewsPanel product={product} onSubmit={() => toast.success('Thank you for your review!', { description: 'Your feedback has been submitted successfully.' })} />}
-        </section>
-
-        <section className="similar-section"><div className="similar-heading"><div><span><PackageCheck size={14} /> Curated for you</span><h2>Similar Items You Might Also Like</h2></div><a href="#honey">View all honey <ChevronRight size={14} /></a></div><div className="similar-products">{similar.map((item) => <SimilarProduct key={item.id} product={item} />)}</div></section>
-      </div>
+      {content}
       <Footer />
     </main>
+  )
+}
+
+function ProductView({ product, wantsReview }: { product: ProductDetail; wantsReview: boolean }) {
+  const { data: tree } = useGetCategoriesQuery()
+  const { add, cart } = useCart()
+  const { isWished, toggle } = useWishlist()
+  const [variantId, setVariantId] = useState(() => defaultVariantOf(product)?.id ?? product.variants[0]?.id)
+  const [quantity, setQuantity] = useState(1)
+  const [adding, setAdding] = useState(false)
+  const [tab, setTab] = useState<Tab>(wantsReview ? 'reviews' : 'description')
+  const [reviewRequest, setReviewRequest] = useState(wantsReview)
+
+  // `?review=1` arriving while the page is open (e.g. from an order) opens the reviews tab.
+  if (wantsReview !== reviewRequest) {
+    setReviewRequest(wantsReview)
+    if (wantsReview) setTab('reviews')
+  }
+
+  useEffect(() => {
+    const previous = document.title
+    document.title = `${product.name} · Bossco`
+    return () => { document.title = previous }
+  }, [product.name])
+
+  const variant = product.variants.find((item) => item.id === variantId)
+  const price = variant?.price ?? product.price
+  const compareAtPrice = variant ? variant.compareAtPrice : product.compareAtPrice
+  const discount = discountOf(price, compareAtPrice)
+  const available = variant ? variant.inStock : product.inStock
+  const wished = isWished(product.id)
+  const match = findCategory(tree, product.category.slug)
+  const theme = match ? themeOf(match) : /honey|comb|gift/.test(product.category.slug) ? 'honey' : 'dry-fruits'
+  const root = match?.parent ?? match?.category ?? product.category
+  const gallery = product.images.length ? product.images : product.image ? [product.image] : []
+  const description = paragraphsOf(product.description)
+  const subtotal = cart?.subtotal ?? 0
+  const remainingForFree = Math.max(0, FREE_DELIVERY_OVER - subtotal)
+
+  const addToCart = async () => {
+    if (!variant || !variant.inStock) return
+    setAdding(true)
+    await add({ product, variant, quantity })
+    setAdding(false)
+  }
+
+  const onTabKey = (event: KeyboardEvent) => {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+    const next: Tab = tab === 'description' ? 'reviews' : 'description'
+    setTab(next)
+    document.getElementById(`tab-${next}`)?.focus()
+  }
+
+  return (
+    <div className="mx-auto max-w-[1280px] px-5 pb-20 pt-8 sm:px-8 lg:px-12 lg:pt-12">
+      <a className="product-back" href={`#shop/${product.category.slug}`}><ArrowLeft size={16} /> Back to {product.category.name.toLowerCase()}</a>
+      <nav className="product-breadcrumb" aria-label="Breadcrumb">
+        <a href="#home">Home</a><span aria-hidden="true">/</span>
+        <a href="#shop">Shop</a><span aria-hidden="true">/</span>
+        {match?.parent && <><a href={`#shop/${match.parent.slug}`}>{match.parent.name}</a><span aria-hidden="true">/</span></>}
+        <a href={`#shop/${product.category.slug}`}>{product.category.name}</a><span aria-hidden="true">/</span>
+        <b aria-current="page">{product.name}</b>
+      </nav>
+
+      <section className="product-detail-top">
+        <ProductGallery images={gallery} name={product.name} wished={wished} onWish={() => toggle(product)} />
+
+        <div className="product-purchase-panel">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <span className="product-overline">{product.category.name}{product.badge ? <span className="pdp-badge">{product.badge}</span> : null}</span>
+              <h1>{product.name}</h1>
+              {product.subtitle && <p>{product.subtitle}</p>}
+            </div>
+            <div className="flex shrink-0 gap-1">
+              <button className={`detail-icon-button ${wished ? 'is-active' : ''}`} type="button" onClick={() => toggle(product)} aria-pressed={wished} aria-label={wished ? 'Remove from wishlist' : 'Save to wishlist'}><Heart size={15} fill={wished ? 'currentColor' : 'none'} /></button>
+              <button className="detail-icon-button" type="button" onClick={() => shareProduct(product)} aria-label="Share this product"><Share2 size={15} /></button>
+            </div>
+          </div>
+
+          <div className="product-price-row">
+            <div><strong>{formatMoney(price)}</strong>{discount > 0 && <small aria-label={`Was ${formatMoney(compareAtPrice!)}`}>{formatMoney(compareAtPrice!)}</small>}</div>
+            {discount > 0 && <span>Save {discount}%</span>}
+            <button className="detail-rating" type="button" onClick={() => { setTab('reviews'); document.getElementById('product-information')?.scrollIntoView({ behavior: 'smooth' }) }}>
+              <RatingStars rating={product.rating} count={product.reviewCount} />
+            </button>
+          </div>
+
+          <dl className="product-meta">
+            <div><dt>SKU</dt><dd className="text-[11px]">{variant ? variant.sku.split('-').map((part, index) => <span key={index}>{index > 0 && <>-<wbr /></>}{part}</span>) : '—'}</dd></div>
+            <div><dt>Category</dt><dd><a href={`#shop/${product.category.slug}`}>{product.category.name}</a></dd></div>
+            <div><dt>Availability</dt><dd className={available ? (variant?.lowStock ? 'text-[#b2741c]' : 'text-[#4f7f46]') : 'text-[#b94738]'}>{available ? (variant?.lowStock ? 'Low stock' : 'In stock') : 'Out of stock'}</dd></div>
+          </dl>
+
+          {product.variants.length > 0 && (
+            <VariantSelector variants={product.variants} selectedId={variantId} onSelect={(next) => setVariantId(next.id)} legend={theme === 'honey' ? 'Jar size' : 'Pack size'} />
+          )}
+          {variant?.inStock && variant.lowStock && <p className="pdp-low-stock"><AlertTriangle size={13} /> Only a few left in {variant.label} — order soon.</p>}
+
+          <div className="product-buy-row">
+            <QuantityStepper value={quantity} onChange={setQuantity} max={MAX_QUANTITY} disabled={!available} />
+            <button className="detail-add-cart" type="button" onClick={addToCart} disabled={!available || adding} aria-busy={adding}>
+              {adding ? <><Loader2 className="animate-spin" size={15} /> Adding…</> : available ? <><ShoppingBag size={15} /> Add to cart · {formatMoney(price * quantity)}</> : 'Out of stock'}
+            </button>
+          </div>
+
+          <div className="product-service-list">
+            <div>
+              <Truck size={19} />
+              <span>
+                <b>{remainingForFree > 0 ? 'Free delivery over ₹999' : 'Your order ships free'}</b>
+                <small>{remainingForFree > 0 && subtotal > 0 ? `Add ${formatMoney(remainingForFree)} more to your cart for free delivery.` : remainingForFree > 0 ? 'Standard and express delivery across India — choose at checkout.' : 'Your cart already qualifies for free standard delivery.'}</small>
+              </span>
+            </div>
+            <div><PackageCheck size={19} /><span><b>Freshly packed after you order</b><small>Sealed for freshness{product.origin ? ` · Sourced from ${product.origin}` : ''}</small></span></div>
+          </div>
+        </div>
+      </section>
+
+      <section className="product-information" id="product-information">
+        <div className="product-tabs" role="tablist" aria-label="Product information" onKeyDown={onTabKey}>
+          <button id="tab-description" role="tab" aria-selected={tab === 'description'} aria-controls="panel-description" tabIndex={tab === 'description' ? 0 : -1} className={tab === 'description' ? 'is-active' : ''} type="button" onClick={() => setTab('description')}>Description</button>
+          <button id="tab-reviews" role="tab" aria-selected={tab === 'reviews'} aria-controls="panel-reviews" tabIndex={tab === 'reviews' ? 0 : -1} className={tab === 'reviews' ? 'is-active' : ''} type="button" onClick={() => setTab('reviews')}>Reviews ({product.reviewCount})</button>
+        </div>
+        {tab === 'description' ? (
+          <div className="product-copy" id="panel-description" role="tabpanel" aria-labelledby="tab-description">
+            <h2>Product Description</h2>
+            {description.length ? description.map((paragraph, index) => <p key={index}>{paragraph}</p>) : <p>{product.subtitle ?? 'Details for this product are coming soon.'}</p>}
+            <h3>At a glance</h3>
+            <ul>
+              {product.origin && <li><Check size={14} />Origin: {product.origin}</li>}
+              <li><Check size={14} />Category: {product.category.name}</li>
+              {product.variants.length > 0 && <li><Check size={14} />Available in {product.variants.map((item) => item.label).join(', ')}</li>}
+              <li><Check size={14} />Free delivery on orders over {formatMoney(FREE_DELIVERY_OVER)}</li>
+            </ul>
+            <h3>Storage &amp; care</h3>
+            <ul>{CARE_NOTES[theme].map((note) => <li key={note}><Check size={14} />{note}</li>)}</ul>
+          </div>
+        ) : (
+          <div id="panel-reviews" role="tabpanel" aria-labelledby="tab-reviews">
+            <ReviewsPanel slug={product.slug} productName={product.name} focusForm={reviewRequest} />
+          </div>
+        )}
+      </section>
+
+      <SimilarProducts products={product.similar} viewAllHref={`#shop/${root.slug}`} viewAllLabel={`View all ${root.name.toLowerCase()}`} />
+    </div>
   )
 }

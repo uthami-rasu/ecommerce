@@ -32,7 +32,7 @@ export function HeroSection() {
 
           <div className="hero-reveal hero-delay-3 mt-7 flex flex-wrap gap-3">
             <ActionLink href="#favorites">Shop bestsellers</ActionLink>
-            <ActionLink href="#favorites" variant="secondary">
+            <ActionLink href="#shop" variant="secondary">
               Explore all
             </ActionLink>
           </div>

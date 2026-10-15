@@ -48,10 +48,6 @@ a {
   -webkit-tap-highlight-color: transparent;
 }
 
-button {
-  font: inherit;
-}
-
 button:not(:disabled),
 select {
   cursor: pointer;

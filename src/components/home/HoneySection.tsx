@@ -66,7 +66,7 @@ export function HoneySection() {
             />
           </div>
           <div className="-mt-2">
-            <ActionLink href="#favorites">Explore Honey Collection</ActionLink>
+            <ActionLink href="#honey">Explore Honey Collection</ActionLink>
           </div>
         </div>
 

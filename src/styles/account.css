@@ -1,0 +1,40 @@
+/* My Account (#account/<tab>). Tailwind first; this file only holds what utilities can't express. */
+
+.account-canvas {
+  position: relative;
+  background:
+    radial-gradient(circle at -5% 105%, rgba(253, 200, 195, 0.42) 0%, rgba(254, 220, 215, 0.18) 38%, transparent 65%),
+    radial-gradient(circle at 105% 0%, rgba(217, 178, 124, 0.22) 0%, transparent 45%),
+    #fffefa;
+}
+
+.dark .account-canvas {
+  background:
+    radial-gradient(circle at -5% 105%, rgba(52, 140, 104, 0.12) 0%, transparent 55%),
+    radial-gradient(circle at 105% 0%, rgba(217, 178, 124, 0.1) 0%, transparent 45%),
+    #0c0a09;
+}
+
+.account-swap { animation: account-swap 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@keyframes account-swap {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+.account-dialog-backdrop { animation: account-fade 0.2s ease-out both; }
+.account-dialog-panel { animation: account-pop 0.32s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@keyframes account-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes account-pop {
+  from { opacity: 0; transform: translateY(16px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Horizontal tab strip on small screens: scrollable, no scrollbar. */
+.account-tabs-scroll { scrollbar-width: none; }
+.account-tabs-scroll::-webkit-scrollbar { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .account-swap, .account-dialog-backdrop, .account-dialog-panel { animation: none; }
+}

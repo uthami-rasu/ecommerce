@@ -7,7 +7,11 @@ export function useTheme() {
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
     document.documentElement.style.colorScheme = theme
-    localStorage.setItem('bossco-theme', theme)
+    try {
+      localStorage.setItem('bossco-theme', theme)
+    } catch {
+      // Storage unavailable: the theme still applies for this visit.
+    }
   }, [theme])
 
   return theme

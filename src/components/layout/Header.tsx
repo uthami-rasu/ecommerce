@@ -7,19 +7,15 @@ import {
   Search,
   ShoppingBag,
   Sparkles,
-  UserRound,
   X,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useEffect } from 'react'
 import { Brand } from '../ui/Brand'
 import { SearchPanel } from './SearchPanel'
-import { useAppSelector } from '../../app/hooks'
-
-const headerActions = [
-  { label: 'Wishlist', icon: Heart },
-  { label: 'Account', icon: UserRound },
-] as const
+import { AccountMenu } from './AccountMenu'
+import { useCart } from '../../hooks/useCart'
+import { useWishlist } from '../../hooks/useWishlist'
 
 const navItems = [
   { label: 'Home', href: '#home', icon: Home },
@@ -30,8 +26,8 @@ const navItems = [
 ] as const
 
 export function Header() {
-  const cartCount = useAppSelector((state) => state.commerce.cart.reduce((total, item) => total + item.quantity, 0))
-  const wishlistCount = useAppSelector((state) => state.commerce.wishlist.length)
+  const { count: cartCount } = useCart()
+  const { count: wishlistCount } = useWishlist()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
@@ -78,13 +74,12 @@ export function Header() {
               <Search className="transition group-hover:rotate-[-8deg] group-hover:scale-110" size={18} />
               <span className="absolute -bottom-7 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-[#173f32] px-2 py-1 text-[9px] text-white group-hover:block">Search ⌘K</span>
             </button>
-            {headerActions.map(({ label, icon: Icon }) => (
-              <a className="icon-button group relative" aria-label={label} key={label} href={label === 'Wishlist' ? '#wishlist' : '#account'}>
-                <Icon className="transition group-hover:-translate-y-0.5 group-hover:scale-110" size={18} />
-                {label === 'Wishlist' && wishlistCount > 0 && <span className="header-count">{wishlistCount}</span>}
-              </a>
-            ))}
+            <a className="icon-button group relative" aria-label="Wishlist" href="#wishlist">
+              <Heart className="transition group-hover:-translate-y-0.5 group-hover:scale-110" size={18} />
+              {wishlistCount > 0 && <span className="header-count">{wishlistCount}</span>}
+            </a>
           </div>
+          <AccountMenu />
           <a className="icon-button relative" aria-label="Shopping cart" href="#cart">
             <ShoppingBag size={18} />
             {cartCount > 0 && <span className="header-count">{cartCount}</span>}

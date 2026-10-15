@@ -1,0 +1,73 @@
+/* Auth pages (#login, #register, #verify-email, #forgot-password). Tailwind first; only what utilities can't express lives here. */
+
+/* Brand panel: deep green with slowly drifting gold / emerald light. */
+.auth-aurora {
+  background:
+    radial-gradient(60% 50% at 20% 15%, rgba(217, 178, 124, 0.35) 0%, transparent 60%),
+    radial-gradient(55% 45% at 85% 80%, rgba(52, 140, 104, 0.45) 0%, transparent 65%),
+    radial-gradient(40% 35% at 70% 20%, rgba(255, 214, 140, 0.18) 0%, transparent 70%),
+    linear-gradient(155deg, #10301f 0%, #173f32 45%, #0f2a20 100%);
+  background-size: 140% 140%, 150% 150%, 120% 120%, 100% 100%;
+  animation: auth-aurora 18s ease-in-out infinite alternate;
+}
+
+@keyframes auth-aurora {
+  0% { background-position: 0% 0%, 100% 100%, 60% 0%, 0 0; }
+  50% { background-position: 30% 20%, 70% 80%, 40% 30%, 0 0; }
+  100% { background-position: 10% 40%, 90% 60%, 80% 10%, 0 0; }
+}
+
+/* Fine film grain so the gradient never bands. */
+.auth-grain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.08;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.auth-float { animation: auth-float 7s ease-in-out infinite; }
+.auth-float-slow { animation: auth-float 11s ease-in-out infinite reverse; }
+
+@keyframes auth-float {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  50% { transform: translate3d(0, -14px, 0) rotate(-1.5deg); }
+}
+
+/* The Brand lockup is dark green by default; flip it to cream on the green panel. */
+.auth-brand-light .brand-lockup > span { color: #fbf8f5; }
+.auth-brand-light .brand-lockup > span > span:last-child { color: #e4c08d; }
+
+/* Form side: soft blurred glows behind the glass card. */
+.auth-canvas {
+  background:
+    radial-gradient(40rem 28rem at 85% 0%, rgba(217, 178, 124, 0.22), transparent 70%),
+    radial-gradient(36rem 30rem at 0% 100%, rgba(23, 63, 50, 0.12), transparent 70%),
+    #fbf9f4;
+}
+
+.dark .auth-canvas {
+  background:
+    radial-gradient(40rem 28rem at 85% 0%, rgba(217, 178, 124, 0.1), transparent 70%),
+    radial-gradient(36rem 30rem at 0% 100%, rgba(52, 140, 104, 0.12), transparent 70%),
+    #0c0a09;
+}
+
+/* Mode / step swap. */
+.auth-swap { animation: auth-swap 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@keyframes auth-swap {
+  from { opacity: 0; transform: translateY(10px); filter: blur(4px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+
+/* OTP digit boxes. */
+.otp-box { caret-color: transparent; }
+.otp-box:focus { caret-color: #173f32; }
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-aurora, .auth-float, .auth-float-slow, .auth-swap { animation: none; }
+}
+

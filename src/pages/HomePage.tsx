@@ -12,7 +12,7 @@ import { TrendingSection } from '../components/home/TrendingSection'
 
 export function HomePage() {
   return (
-    <main>
+    <main className="overflow-x-clip">
       <HeroSection />
       <div className="relative isolate flow-root bg-stone-50 dark:bg-stone-950">
         <NutDecorations />

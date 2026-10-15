@@ -53,7 +53,7 @@ export function ScrollProgress({ route }: ScrollProgressProps) {
 
     let lenisAdded = false
     const attachLenis = () => {
-      const lenis = (window as any).lenis
+      const lenis = window.lenis
       if (lenis && typeof lenis.on === 'function') {
         lenis.on('scroll', (e: { progress: number }) => {
           updateReadingProgress(e.progress)

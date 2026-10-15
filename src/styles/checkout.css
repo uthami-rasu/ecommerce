@@ -1,0 +1,149 @@
+/* Cart, checkout, payment and order pages. Tailwind does most of the work; this file holds
+   the page backdrop, the mock gateway ornaments and a few keyframes. */
+
+.checkout-page {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at -5% 100%, rgba(253, 205, 195, 0.42) 0%, rgba(254, 222, 215, 0.18) 36%, transparent 62%),
+    radial-gradient(circle at 105% 100%, rgba(217, 178, 124, 0.30) 0%, rgba(217, 178, 124, 0.10) 36%, transparent 62%),
+    #fffdf8;
+}
+
+.dark .checkout-page {
+  background:
+    radial-gradient(circle at -5% 100%, rgba(217, 178, 124, 0.10) 0%, transparent 55%),
+    radial-gradient(circle at 105% 100%, rgba(23, 63, 50, 0.45) 0%, transparent 60%),
+    #0c0a09;
+}
+
+/* index.css has an unlayered `button { font: inherit }` which beats Tailwind's layered text-* / font-*
+   utilities; fall back to the layered (utility) values inside these pages. */
+:is(.checkout-page, .order-history) :is(button, input, select, textarea) {
+  font: revert-layer;
+}
+
+/* Hide native number spinners in the quantity / card inputs. */
+.checkout-page input[type='number']::-webkit-outer-spin-button,
+.checkout-page input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Skeleton shimmer */
+.checkout-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: rgba(120, 113, 108, 0.12);
+}
+
+.checkout-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  translate: -100% 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  animation: checkout-shimmer 1.4s ease-in-out infinite;
+}
+
+.dark .checkout-skeleton::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+}
+
+@keyframes checkout-shimmer {
+  to { translate: 100% 0; }
+}
+
+/* Mock gateway */
+.gateway-ribbon {
+  position: absolute;
+  top: 18px;
+  right: -46px;
+  width: 170px;
+  rotate: 45deg;
+  background: repeating-linear-gradient(-45deg, #f5c86b 0 10px, #e9b453 10px 20px);
+  color: #3b2a07;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-align: center;
+  text-transform: uppercase;
+  padding: 5px 0;
+  box-shadow: 0 6px 16px -8px rgba(0, 0, 0, 0.45);
+}
+
+.gateway-card-face {
+  background:
+    radial-gradient(circle at 85% 15%, rgba(217, 178, 124, 0.55), transparent 45%),
+    radial-gradient(circle at 10% 110%, rgba(82, 185, 130, 0.35), transparent 50%),
+    linear-gradient(135deg, #173f32 0%, #0f2b22 60%, #0a1f18 100%);
+}
+
+.gateway-chip {
+  background: linear-gradient(135deg, #f3dca8, #c99b52 55%, #f1d8a0);
+}
+
+.gateway-processing-ring {
+  animation: gateway-spin 1s linear infinite;
+}
+
+@keyframes gateway-spin {
+  to { rotate: 360deg; }
+}
+
+.gateway-pop {
+  animation: gateway-pop 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.35) both;
+}
+
+@keyframes gateway-pop {
+  from { opacity: 0; transform: scale(0.6); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.gateway-shake {
+  animation: gateway-shake 0.45s ease both;
+}
+
+@keyframes gateway-shake {
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+/* Order tracker: the filled rail grows in */
+.tracker-fill {
+  transition: width 0.9s cubic-bezier(0.2, 0.8, 0.2, 1), height 0.9s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.tracker-current::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 999px;
+  border: 2px solid rgba(217, 178, 124, 0.7);
+  animation: tracker-pulse 1.8s ease-out infinite;
+}
+
+@keyframes tracker-pulse {
+  from { opacity: 0.9; transform: scale(0.85); }
+  to { opacity: 0; transform: scale(1.35); }
+}
+
+.checkout-fade-in {
+  animation: checkout-fade-in 0.35s ease both;
+}
+
+@keyframes checkout-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .checkout-skeleton::after,
+  .tracker-current::before,
+  .gateway-processing-ring,
+  .gateway-pop,
+  .gateway-shake,
+  .checkout-fade-in {
+    animation: none;
+  }
+}

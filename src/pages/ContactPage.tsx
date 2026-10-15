@@ -1,11 +1,128 @@
+import { useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
-import { useState } from 'react'
-import { Check, Globe2, Mail, MapPin, MessageCircle, Phone, Send } from 'lucide-react'
+import { Check, Globe2, Loader2, Mail, MapPin, MessageCircle, Phone, RotateCcw, Send } from 'lucide-react'
 import { Footer } from '../components/layout/Footer'
 import { FacebookIcon, InstagramIcon, WhatsAppIcon } from '../components/ui/SocialIcons'
+import { useAuth } from '../hooks/useAuth'
+import { errorMessage } from '../lib/http/apiClient'
+import { CONTACT_SUBJECTS, contactRepository, type ContactInput } from '../repositories/contactRepository'
+import { fullName } from '../utils/format'
+import '../styles/catalog.css'
+
+type Fields = { fullName: string; email: string; phone: string; orderNumber: string; subject: ContactInput['subject']; message: string; consent: boolean }
+type Errors = Partial<Record<keyof Fields, string>>
+
+const PHONE = /^\+?[0-9 ()-]{7,20}$/
+const ORDER = /^#?BSC-[0-9A-Z]{5,8}$/
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const MESSAGE_MAX = 5000
+
+function validate(fields: Fields): Errors {
+  const errors: Errors = {}
+  if (fields.fullName.trim().length < 2) errors.fullName = 'Please enter your full name.'
+  if (!EMAIL.test(fields.email.trim())) errors.email = 'Enter a valid email address.'
+  if (!PHONE.test(fields.phone.trim())) errors.phone = 'Enter a valid phone number, e.g. +91 98765 43210.'
+  if (fields.orderNumber.trim() && !ORDER.test(fields.orderNumber.trim().toUpperCase())) errors.orderNumber = 'Order numbers look like BSC-7KQ2M9XA.'
+  if (fields.message.trim().length < 10) errors.message = 'Tell us a little more (at least 10 characters).'
+  if (!fields.consent) errors.consent = 'Please accept the privacy policy so we can reply.'
+  return errors
+}
+
+function ContactForm() {
+  const { user } = useAuth()
+  const blank = (): Fields => ({ fullName: fullName(user), email: user?.email ?? '', phone: user?.phone ?? '', orderNumber: '', subject: CONTACT_SUBJECTS[0], message: '', consent: false })
+  const [fields, setFields] = useState<Fields>(blank)
+  const [errors, setErrors] = useState<Errors>({})
+  const [status, setStatus] = useState<'idle' | 'sending' | 'sent'>('idle')
+  const [serverError, setServerError] = useState<string | null>(null)
+
+  const set = <K extends keyof Fields>(key: K, value: Fields[K]) => {
+    setFields((current) => ({ ...current, [key]: value }))
+    if (errors[key]) setErrors((current) => ({ ...current, [key]: undefined }))
+    if (status === 'sent') setStatus('idle')
+  }
+
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const found = validate(fields)
+    setErrors(found)
+    setServerError(null)
+    const firstInvalid = Object.keys(found)[0]
+    if (firstInvalid) {
+      event.currentTarget.querySelector<HTMLElement>(`[name="${firstInvalid}"]`)?.focus()
+      return
+    }
+    setStatus('sending')
+    try {
+      const orderNumber = fields.orderNumber.trim().toUpperCase().replace(/^#/, '')
+      await contactRepository.send({
+        fullName: fields.fullName.trim(),
+        email: fields.email.trim(),
+        phone: fields.phone.trim(),
+        orderNumber: orderNumber || undefined,
+        subject: fields.subject,
+        message: fields.message.trim(),
+        consent: fields.consent,
+      })
+      setStatus('sent')
+      setFields(blank())
+      toast.success('Message sent successfully!', { description: 'Thank you! We usually reply within one business day.' })
+    } catch (error) {
+      const message = errorMessage(error)
+      setStatus('idle')
+      setServerError(message)
+      toast.error('Could not send your message', { description: message })
+    }
+  }
+
+  const fieldProps = (key: keyof Fields) => ({
+    name: key,
+    'aria-invalid': Boolean(errors[key]),
+    'aria-describedby': errors[key] ? `contact-${key}-error` : undefined,
+  })
+  const error = (key: keyof Fields) => errors[key] && <span className="contact-field-error" id={`contact-${key}-error`} role="alert">{errors[key]}</span>
+
+  return (
+    <form className="contact-form" onSubmit={submit} noValidate>
+      <div className="contact-form-heading"><div><span>Send a note</span><h2>How can we help?</h2></div><Mail size={25} /></div>
+      <div className="contact-form-layout">
+        <aside className="contact-form-aside">
+          <span className="contact-aside-icon"><MessageCircle size={20} /></span>
+          <p>Personal support</p>
+          <h3>Let’s start a good conversation.</h3>
+          <p>Whether it’s an order, a gifting idea or a wholesale partnership, our team will point you in the right direction.</p>
+          <div className="contact-promises"><span><Check size={13} /> Usually replies within one business day</span><span><Check size={13} /> Helpful humans, never automated scripts</span><span><Check size={13} /> Secure and private communication</span></div>
+          <a href="tel:+918807783007"><Phone size={15} /><span><small>Prefer to talk?</small><b>+91 88077 83007</b></span></a>
+        </aside>
+        <div className="contact-form-fields">
+          {status === 'sent' && (
+            <div className="contact-success" role="status">
+              <Check size={18} />
+              <div><b>Thanks — your message is on its way.</b><span>Our team usually replies within one business day.</span></div>
+              <button type="button" onClick={() => setStatus('idle')} aria-label="Dismiss"><RotateCcw size={13} /> New message</button>
+            </div>
+          )}
+          <div className="contact-form-grid">
+            <label>Full name<input {...fieldProps('fullName')} autoComplete="name" maxLength={120} placeholder="Your name" value={fields.fullName} onChange={(event) => set('fullName', event.target.value)} />{error('fullName')}</label>
+            <label>Email address<input {...fieldProps('email')} type="email" autoComplete="email" maxLength={254} placeholder="you@example.com" value={fields.email} onChange={(event) => set('email', event.target.value)} />{error('email')}</label>
+            <label>Phone number<input {...fieldProps('phone')} type="tel" autoComplete="tel" maxLength={20} placeholder="+91 98765 43210" value={fields.phone} onChange={(event) => set('phone', event.target.value)} />{error('phone')}</label>
+            <label>Order number <small>Optional</small><input {...fieldProps('orderNumber')} placeholder="BSC-7KQ2M9XA" maxLength={13} value={fields.orderNumber} onChange={(event) => set('orderNumber', event.target.value.toUpperCase())} />{error('orderNumber')}</label>
+            <label className="contact-span-2">Subject<select {...fieldProps('subject')} value={fields.subject} onChange={(event) => set('subject', event.target.value as Fields['subject'])}>{CONTACT_SUBJECTS.map((subject) => <option key={subject}>{subject}</option>)}</select></label>
+            <label className="contact-span-2">Message<textarea {...fieldProps('message')} maxLength={MESSAGE_MAX} placeholder="How can we help you?" value={fields.message} onChange={(event) => set('message', event.target.value)} /><span className="contact-field-meta">{error('message') ?? <span />}<small>{fields.message.length}/{MESSAGE_MAX}</small></span></label>
+          </div>
+          <label className="contact-consent"><input {...fieldProps('consent')} type="checkbox" checked={fields.consent} onChange={(event) => set('consent', event.target.checked)} /> <span>I agree to the Privacy Policy and terms of service regarding data handling.</span></label>
+          {error('consent')}
+          {serverError && <p className="contact-field-error mt-3" role="alert">{serverError}</p>}
+          <button className={status === 'sent' ? 'is-submitted' : ''} type="submit" disabled={status === 'sending'} aria-busy={status === 'sending'}>
+            {status === 'sending' ? <><Loader2 className="animate-spin" size={16} /> Sending…</> : status === 'sent' ? <><Check size={16} /> Message sent successfully</> : <><Send size={15} /> Send message</>}
+          </button>
+        </div>
+      </div>
+    </form>
+  )
+}
 
 export function ContactPage() {
-  const [submitted, setSubmitted] = useState(false)
   return (
     <main className="contact-page">
       <section className="contact-hero">
@@ -20,35 +137,7 @@ export function ContactPage() {
       </section>
 
       <div className="contact-shell">
-        <form className="contact-form" onSubmit={(event) => {
-          event.preventDefault()
-          setSubmitted(true)
-          toast.success('Message sent successfully!', { description: 'Thank you! We usually reply within one business day.' })
-        }}>
-          <div className="contact-form-heading"><div><span>Send a note</span><h2>How can we help?</h2></div><Mail size={25} /></div>
-          <div className="contact-form-layout">
-            <aside className="contact-form-aside">
-              <span className="contact-aside-icon"><MessageCircle size={20} /></span>
-              <p>Personal support</p>
-              <h3>Let’s start a good conversation.</h3>
-              <p>Whether it’s an order, a gifting idea or a wholesale partnership, our team will point you in the right direction.</p>
-              <div className="contact-promises"><span><Check size={13} /> Usually replies within one business day</span><span><Check size={13} /> Helpful humans, never automated scripts</span><span><Check size={13} /> Secure and private communication</span></div>
-              <a href="tel:+918807783007"><Phone size={15} /><span><small>Prefer to talk?</small><b>+91 88077 83007</b></span></a>
-            </aside>
-            <div className="contact-form-fields">
-              <div className="contact-form-grid">
-                <label>Full name<input required placeholder="John Doe" /></label>
-                <label>Email address<input required type="email" placeholder="john@example.com" /></label>
-                <label>Phone number<input required type="tel" placeholder="+91 98765 43210" /></label>
-                <label>Order number <small>Optional</small><input placeholder="#BSC-12345" /></label>
-                <label className="contact-span-2">Subject<select defaultValue="Product enquiry"><option>Product enquiry</option><option>Order support</option><option>Wholesale enquiry</option><option>Gifting and hampers</option><option>Something else</option></select></label>
-                <label className="contact-span-2">Message<textarea required placeholder="How can we help you?" /></label>
-              </div>
-              <label className="contact-consent"><input required type="checkbox" /> <span>I agree to the Privacy Policy and terms of service regarding data handling.</span></label>
-              <button className={submitted ? 'is-submitted' : ''} type="submit">{submitted ? <><Check size={16} /> Message sent successfully</> : <><Send size={15} /> Send message</>}</button>
-            </div>
-          </div>
-        </form>
+        <ContactForm />
 
         <section className="contact-cards" aria-label="Contact information">
           <article><div className="contact-card-top"><span><Mail size={21} /></span><small>Direct lines</small></div><h2>Talk to our team</h2><p>Questions about a jar or an existing order? We’re ready to help.</p><div className="contact-card-links"><a href="mailto:hello@bossco.com"><Mail size={13} /> hello@bossco.com</a><a href="tel:+918807783007"><Phone size={13} /> +91 88077 83007</a></div><b className="contact-status"><i /> Online today</b></article>

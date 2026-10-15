@@ -1,50 +1,105 @@
-import { useEffect, useState } from 'react'
-import { Header } from './components/layout/Header'
-import { useLenis } from './hooks/useLenis'
-import { useTheme } from './hooks/useTheme'
-import { useReveal } from './hooks/useReveal'
-import { CategoryPage } from './pages/CategoryPage'
-import { HomePage } from './pages/HomePage'
-import { ProductDetailPage } from './pages/ProductDetailPage'
-import { ScrollProgress } from './components/ui/ScrollProgress'
-import { honeyProducts } from './constants/honeyProducts'
-import { CartPage, CheckoutPage, MyAccountPage, OrderCompletePage, WishlistPage } from './pages/CommercePages'
-import { ContactPage } from './pages/ContactPage'
-
+import { lazy, Suspense, useEffect, type ComponentType, type ReactNode } from 'react'
 import { Toaster } from 'sonner'
+import { Header } from './components/layout/Header'
+import { RequireAdmin, RequireAuth } from './components/routing/RouteGuards'
+import { PageLoader } from './components/ui/PageLoader'
+import { ScrollProgress } from './components/ui/ScrollProgress'
+import { useLenis } from './hooks/useLenis'
+import { useReveal } from './hooks/useReveal'
+import { useRoute } from './hooks/useRoute'
+import { useTheme } from './hooks/useTheme'
+import { HomePage } from './pages/HomePage'
+import type { Route } from './utils/router'
+
+// Route-level code splitting: only the home page ships in the entry bundle.
+function named<P extends object, K extends string>(load: () => Promise<{ [key in K]: ComponentType<P> }>, name: K) {
+  return lazy(() => load().then((module) => ({ default: module[name] })))
+}
+
+const CategoryPage = named(() => import('./pages/CategoryPage'), 'CategoryPage')
+const ProductDetailPage = named(() => import('./pages/ProductDetailPage'), 'ProductDetailPage')
+const ContactPage = named(() => import('./pages/ContactPage'), 'ContactPage')
+const WishlistPage = named(() => import('./pages/WishlistPage'), 'WishlistPage')
+const AuthPage = named(() => import('./pages/auth/AuthPage'), 'AuthPage')
+const AccountPage = named(() => import('./pages/account/AccountPage'), 'AccountPage')
+const CartPage = named(() => import('./pages/checkout/CartPage'), 'CartPage')
+const CheckoutPage = named(() => import('./pages/checkout/CheckoutPage'), 'CheckoutPage')
+const PaymentPage = named(() => import('./pages/checkout/PaymentPage'), 'PaymentPage')
+const OrderCompletePage = named(() => import('./pages/checkout/OrderCompletePage'), 'OrderCompletePage')
+const OrderDetailPage = named(() => import('./pages/orders/OrderDetailPage'), 'OrderDetailPage')
+const AdminApp = named(() => import('./pages/admin/AdminApp'), 'AdminApp')
+
+const PAGE_ROUTES = new Set([
+  'home', 'honey', 'shop', 'product', 'contact', 'cart', 'checkout', 'pay', 'order-complete', 'orders', 'wishlist',
+  'account', 'my-account', 'admin', 'login', 'register', 'verify-email', 'forgot-password',
+])
+
+type Resolved = { page: ReactNode; chrome?: boolean }
+
+const AUTH_MODES = ['login', 'register', 'verify-email', 'forgot-password'] as const
+type AuthMode = (typeof AUTH_MODES)[number]
+
+/**
+ * Hash routes. Unknown hashes fall back to the home page so in-page anchors
+ * (#favorites, #trending, #gallery…) keep working.
+ */
+function resolve(route: Route): Resolved {
+  const [head, second, ...rest] = route.segments
+  switch (head) {
+    case 'honey':
+      return { page: <CategoryPage category="honey" /> }
+    case 'shop':
+      return { page: <CategoryPage category={second} /> }
+    case 'product':
+      return second ? { page: <ProductDetailPage key={second} slug={second} /> } : { page: <CategoryPage /> }
+    case 'contact':
+      return { page: <ContactPage /> }
+    case 'cart':
+      return { page: <CartPage /> }
+    case 'checkout':
+      return { page: <RequireAuth><CheckoutPage /></RequireAuth> }
+    case 'pay':
+      return { page: <RequireAuth><PaymentPage key={second} orderNumber={second ?? ''} /></RequireAuth> }
+    case 'order-complete':
+      return { page: <RequireAuth><OrderCompletePage key={second} orderNumber={second ?? ''} /></RequireAuth> }
+    case 'orders':
+      return second
+        ? { page: <RequireAuth><OrderDetailPage key={second} orderNumber={second} /></RequireAuth> }
+        : { page: <RequireAuth><AccountPage tab="orders" /></RequireAuth> }
+    case 'wishlist':
+      return { page: <RequireAuth><WishlistPage /></RequireAuth> }
+    case 'account':
+    case 'my-account':
+      return { page: <RequireAuth><AccountPage tab={second} /></RequireAuth> }
+    case 'admin':
+      return { page: <RequireAdmin><AdminApp segments={[second, ...rest].filter(Boolean)} /></RequireAdmin>, chrome: false }
+    default:
+      if ((AUTH_MODES as readonly string[]).includes(head)) return { page: <AuthPage mode={head as AuthMode} />, chrome: false }
+      return { page: <HomePage /> }
+  }
+}
 
 function App() {
-  const [route, setRoute] = useState(() => window.location.hash)
+  const route = useRoute()
   useLenis()
   useTheme()
   useReveal()
 
+  // New page → start at the top (in-page anchors on the home page are left alone).
   useEffect(() => {
-    const handleRoute = () => {
-      setRoute(window.location.hash)
-    }
-    window.addEventListener('hashchange', handleRoute)
-    return () => window.removeEventListener('hashchange', handleRoute)
-  }, [])
-
-  useEffect(() => {
+    if (route.segments.length && !PAGE_ROUTES.has(route.segments[0])) return
     const scrollToTop = () => {
-      const lenis = (window as any).lenis
-      if (lenis && typeof lenis.scrollTo === 'function') {
-        lenis.scrollTo(0, { immediate: true })
-      }
+      window.lenis?.scrollTo(0, { immediate: true })
       window.scrollTo(0, 0)
-      document.documentElement.scrollTop = 0
-      document.body.scrollTop = 0
     }
-
     scrollToTop()
     const timer = setTimeout(scrollToTop, 50)
     return () => clearTimeout(timer)
-  }, [route])
+    // Only the path matters; query changes (filters, tabs) keep the scroll position.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route.path])
 
-  const productSlug = route.startsWith('#product/') ? decodeURIComponent(route.slice('#product/'.length)) : null
-  const selectedProduct = productSlug ? honeyProducts.find((product) => product.slug === productSlug) : undefined
+  const { page, chrome = true } = resolve(route)
 
   return (
     <div className="min-h-screen bg-stone-50 text-stone-900 transition-colors duration-300 dark:bg-stone-950 dark:text-stone-50">
@@ -75,27 +130,9 @@ function App() {
           },
         }}
       />
-      <ScrollProgress route={route} />
-      <Header />
-      {selectedProduct ? (
-        <ProductDetailPage product={selectedProduct} products={honeyProducts} />
-      ) : route === '#cart' ? (
-        <CartPage products={honeyProducts} />
-      ) : route === '#checkout' ? (
-        <CheckoutPage products={honeyProducts} />
-      ) : route === '#order-complete' ? (
-        <OrderCompletePage products={honeyProducts} />
-      ) : route === '#wishlist' ? (
-        <WishlistPage products={honeyProducts} />
-      ) : route === '#account' || route === '#my-account' ? (
-        <MyAccountPage products={honeyProducts} />
-      ) : route === '#contact' ? (
-        <ContactPage />
-      ) : route === '#honey' ? (
-        <CategoryPage />
-      ) : (
-        <HomePage />
-      )}
+      {chrome && <ScrollProgress route={route.hash} />}
+      {chrome && <Header />}
+      <Suspense fallback={<PageLoader />}>{page}</Suspense>
     </div>
   )
 }

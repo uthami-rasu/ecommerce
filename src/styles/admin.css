@@ -1,0 +1,168 @@
+/* Admin panel — only what Tailwind utilities can't express neatly. */
+
+.admin-root {
+  --admin-chart: #1f7a55;
+  --admin-chart-hover: #17805a;
+  --admin-grid: #ece7dd;
+  --admin-surface: #ffffff;
+  font-feature-settings: "ss01";
+}
+
+.dark .admin-root {
+  --admin-chart: #3fa57b;
+  --admin-chart-hover: #4fb388;
+  --admin-grid: #2c2825;
+  --admin-surface: #1c1917;
+}
+
+/* Native <dialog> used for modals and the mobile nav drawer. */
+.admin-dialog {
+  margin: auto;
+  max-height: min(92dvh, 860px);
+  width: min(560px, calc(100vw - 2rem));
+  overflow: visible;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.admin-dialog::backdrop {
+  background: rgb(18 26 22 / 0.42);
+  backdrop-filter: blur(4px);
+}
+
+.admin-dialog[open] {
+  animation: admin-dialog-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.admin-dialog[open]::backdrop {
+  animation: admin-fade-in 220ms ease-out;
+}
+
+@media (max-width: 639px) {
+  .admin-dialog:not(.admin-drawer) {
+    margin: auto 0 0;
+    width: 100vw;
+    max-width: 100vw;
+    max-height: 94dvh;
+  }
+
+  .admin-dialog:not(.admin-drawer)[open] {
+    animation: admin-sheet-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+}
+
+.admin-drawer {
+  margin: 0 auto 0 0;
+  height: 100dvh;
+  max-height: 100dvh;
+  width: min(300px, 86vw);
+}
+
+.admin-drawer[open] {
+  animation: admin-drawer-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes admin-dialog-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes admin-sheet-in {
+  from { transform: translateY(100%); }
+  to { transform: none; }
+}
+
+@keyframes admin-drawer-in {
+  from { transform: translateX(-100%); }
+  to { transform: none; }
+}
+
+@keyframes admin-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Skeleton shimmer. */
+.admin-skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.6rem;
+  background: #efebe3;
+}
+
+.dark .admin-skeleton {
+  background: #292524;
+}
+
+.admin-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.55), transparent);
+  animation: admin-shimmer 1.4s infinite;
+}
+
+.dark .admin-skeleton::after {
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.06), transparent);
+}
+
+@keyframes admin-shimmer {
+  to { transform: translateX(100%); }
+}
+
+/* Horizontal scroll rows (status tabs) without a visible scrollbar. */
+.admin-scroll-x {
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-scroll-x::-webkit-scrollbar {
+  display: none;
+}
+
+/* Chart. */
+.admin-chart-bar {
+  fill: var(--admin-chart);
+  transition: fill 150ms, opacity 150ms;
+}
+
+.admin-chart-bar[data-active="true"] {
+  fill: var(--admin-chart-hover);
+}
+
+.admin-chart[data-hovering="true"] .admin-chart-bar:not([data-active="true"]) {
+  opacity: 0.55;
+}
+
+.admin-chart-grid {
+  stroke: var(--admin-grid);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+@media (forced-colors: active) {
+  .admin-chart-bar { fill: CanvasText; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-dialog[open],
+  .admin-dialog[open]::backdrop,
+  .admin-skeleton::after {
+    animation: none;
+  }
+}
+
+/* Native date inputs: match the theme in dark mode. */
+.dark .admin-root input[type="date"] {
+  color-scheme: dark;
+}
+
+/* The storefront stylesheet sets an unlayered `button { font: inherit }`, which would
+   beat Tailwind's layered text-size / weight utilities on admin buttons. */
+.admin-root button {
+  font: revert-layer;
+}
