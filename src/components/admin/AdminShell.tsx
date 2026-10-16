@@ -1,40 +1,43 @@
-import { LayoutDashboard, LogOut, Menu, Moon, ShoppingBag, Store, Sun, type LucideIcon } from 'lucide-react'
+import {
+  Layers,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  Package,
+  Settings,
+  ShoppingBag,
+  Store,
+  Users,
+  type LucideIcon,
+} from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { toast } from 'sonner'
-import { useAppDispatch, useAppSelector } from '../../app/hooks'
+import { useAppDispatch } from '../../app/hooks'
 import { useGetDashboardQuery } from '../../features/admin/adminApi'
 import { signOut } from '../../features/auth/authSlice'
-import { toggleTheme } from '../../features/theme/themeSlice'
-import { useAuth } from '../../hooks/useAuth'
-import { fullName, initials } from '../../utils/format'
 import { navigate } from '../../utils/router'
 import { Dialog } from './Dialog'
 import { btn } from './styles'
 
-export type AdminSection = 'dashboard' | 'orders'
+export type AdminSection = 'dashboard' | 'orders' | 'products' | 'categories' | 'customers' | 'settings'
 
 type NavItem = { id: AdminSection; label: string; href: string; icon: LucideIcon; badge?: number }
 
 function BrandMark({ tone = 'light' }: { tone?: 'light' | 'dark' }) {
   return (
-    <a href="#admin" className="flex items-center gap-2.5 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400">
-      <span className="grid size-9 place-items-center rounded-xl bg-[#D9B27C] font-display text-xl font-bold text-[#173f32] shadow-inner">B</span>
+    <a href="#admin" className="flex items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">
+      <span className="grid size-9 place-items-center rounded-xl bg-[#22c55e] text-white shadow-sm">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z" />
+          <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
+        </svg>
+      </span>
       <span className="flex flex-col leading-none">
-        <span className={`text-[15px] font-bold tracking-[.2em] ${tone === 'light' ? 'text-white' : 'text-[#173f32] dark:text-stone-50'}`}>BOSSCO</span>
-        <span className="mt-1 text-[9px] font-semibold uppercase tracking-[.26em] text-[#D9B27C]">Store admin</span>
+        <span className={`text-[17px] font-bold tracking-tight ${tone === 'light' ? 'text-white' : 'text-[#1c3321]'}`}>
+          NutriStock
+        </span>
       </span>
     </a>
-  )
-}
-
-function ThemeButton({ className }: { className: string }) {
-  const dispatch = useAppDispatch()
-  const theme = useAppSelector((state) => state.theme.value)
-  const next = theme === 'light' ? 'dark' : 'light'
-  return (
-    <button type="button" className={className} onClick={() => dispatch(toggleTheme())} aria-label={`Switch to ${next} theme`} title={`Switch to ${next} theme`}>
-      {theme === 'light' ? <Moon size={17} aria-hidden /> : <Sun size={17} aria-hidden />}
-    </button>
   )
 }
 
@@ -49,14 +52,20 @@ function NavLinks({ items, active, onNavigate }: { items: NavItem[]; active: Adm
               href={item.href}
               onClick={onNavigate}
               aria-current={isActive ? 'page' : undefined}
-              className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${
-                isActive ? 'bg-white/12 text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]' : 'text-emerald-50/75 hover:bg-white/6 hover:text-white'
+              className={`group flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
+                isActive
+                  ? 'bg-[#3b5a3b] text-white shadow-sm font-semibold'
+                  : 'text-stone-200/80 hover:bg-white/8 hover:text-white'
               }`}
             >
-              <item.icon size={18} aria-hidden className={isActive ? 'text-[#D9B27C]' : 'text-emerald-100/60 group-hover:text-emerald-50'} />
+              <item.icon
+                size={18}
+                aria-hidden
+                className={isActive ? 'text-white' : 'text-stone-300/70 group-hover:text-white'}
+              />
               <span className="flex-1">{item.label}</span>
               {item.badge ? (
-                <span className="min-w-6 rounded-full bg-[#D9B27C] px-1.5 py-0.5 text-center text-[11px] font-bold text-[#173f32]" aria-label={`${item.badge} awaiting action`}>
+                <span className="min-w-6 rounded-full bg-emerald-500 px-1.5 py-0.5 text-center text-[11px] font-bold text-white" aria-label={`${item.badge} awaiting action`}>
                   {item.badge}
                 </span>
               ) : null}
@@ -69,7 +78,6 @@ function NavLinks({ items, active, onNavigate }: { items: NavItem[]; active: Adm
 }
 
 function SidebarBody({ items, active, onNavigate }: { items: NavItem[]; active: AdminSection; onNavigate?: () => void }) {
-  const { user } = useAuth()
   const dispatch = useAppDispatch()
   const [signingOut, setSigningOut] = useState(false)
 
@@ -81,41 +89,48 @@ function SidebarBody({ items, active, onNavigate }: { items: NavItem[]; active: 
   }
 
   return (
-    <div className="flex h-full flex-col bg-[#173f32] px-4 py-5 text-white dark:bg-[#0f2a21]">
+    <div className="flex h-full flex-col bg-[#24412a] px-4 py-5 text-white dark:bg-[#182b1d]">
       <div className="px-1"><BrandMark /></div>
       <nav aria-label="Admin" className="mt-8 flex-1">
-        <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[.2em] text-emerald-100/45">Manage</p>
         <NavLinks items={items} active={active} onNavigate={onNavigate} />
-        <p className="mb-2 mt-6 px-3 text-[10px] font-semibold uppercase tracking-[.2em] text-emerald-100/45">Storefront</p>
-        <a
-          href="#home"
-          className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-emerald-50/75 transition-colors hover:bg-white/6 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
-        >
-          <Store size={18} aria-hidden className="text-emerald-100/60" /> View store
-        </a>
+        <div className="mt-6 border-t border-white/10 pt-4">
+          <a
+            href="#home"
+            className="flex items-center gap-3 rounded-xl px-3.5 py-2 text-sm font-medium text-stone-200/70 transition-colors hover:bg-white/8 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+          >
+            <Store size={18} aria-hidden className="text-stone-300/70" /> View Storefront
+          </a>
+        </div>
       </nav>
-      {user && (
-        <div className="mt-4 rounded-2xl bg-white/6 p-3 ring-1 ring-white/8">
-          <div className="flex items-center gap-3">
-            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-[#D9B27C]/90 text-xs font-bold text-[#173f32]">{initials(user) || 'A'}</span>
+
+      <div className="mt-auto pt-4 border-t border-white/10">
+        <div className="flex items-center justify-between gap-3 rounded-2xl bg-white/5 p-2.5 ring-1 ring-white/10">
+          <div className="flex items-center gap-3 min-w-0">
+            <img
+              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
+              alt="Robert Fox"
+              className="size-9 shrink-0 rounded-full object-cover ring-2 ring-emerald-500/40"
+            />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold">{fullName(user) || 'Admin'}</p>
-              <p className="truncate text-xs text-emerald-100/60">{user.email}</p>
+              <p className="truncate text-sm font-semibold text-white leading-tight">
+                Robert Fox
+              </p>
+              <p className="truncate text-xs text-stone-300/70 leading-tight">Store Manager</p>
             </div>
           </div>
-          <div className="mt-3 flex gap-2">
+          <div className="flex items-center gap-1">
             <button
               type="button"
               onClick={handleSignOut}
               disabled={signingOut}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-white/8 px-3 py-2 text-xs font-semibold text-emerald-50 transition-colors hover:bg-white/14 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 disabled:opacity-60"
+              title="Sign out"
+              className="grid size-7 place-items-center rounded-lg text-stone-300 hover:bg-white/10 hover:text-rose-300 transition-colors"
             >
-              <LogOut size={14} aria-hidden /> {signingOut ? 'Signing out…' : 'Sign out'}
+              <LogOut size={14} aria-hidden />
             </button>
-            <ThemeButton className="grid size-8 place-items-center rounded-xl bg-white/8 text-emerald-50 transition-colors hover:bg-white/14 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400" />
           </div>
         </div>
-      )}
+      </div>
     </div>
   )
 }
@@ -128,11 +143,15 @@ export function AdminShell({ active, children }: { active: AdminSection; childre
 
   const items: NavItem[] = [
     { id: 'dashboard', label: 'Dashboard', href: '#admin', icon: LayoutDashboard },
+    { id: 'products', label: 'Products', href: '#admin/products', icon: Package },
+    { id: 'categories', label: 'Categories', href: '#admin/categories', icon: Layers },
     { id: 'orders', label: 'Orders', href: '#admin/orders', icon: ShoppingBag, badge: awaiting },
+    { id: 'customers', label: 'Customers', href: '#admin/customers', icon: Users },
+    { id: 'settings', label: 'Settings', href: '#admin/settings', icon: Settings },
   ]
 
   return (
-    <div className="admin-root min-h-screen bg-[#f7f4ee] text-stone-900 dark:bg-stone-950 dark:text-stone-100">
+    <div className="admin-root min-h-screen bg-[#f8faf8] text-stone-900 dark:bg-stone-950 dark:text-stone-100">
       <a href="#admin-main" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-full focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:shadow-lg">
         Skip to content
       </a>
@@ -140,7 +159,7 @@ export function AdminShell({ active, children }: { active: AdminSection; childre
         <SidebarBody items={items} active={active} />
       </aside>
 
-      <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-stone-200/70 bg-[#f7f4ee]/85 px-4 py-2.5 backdrop-blur-md lg:hidden dark:border-stone-800 dark:bg-stone-950/85">
+      <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-stone-200/70 bg-[#f8faf8]/85 px-4 py-2.5 backdrop-blur-md lg:hidden dark:border-stone-800 dark:bg-stone-950/85">
         <div className="flex items-center gap-2">
           <button type="button" className={btn.icon} onClick={() => setMenuOpen(true)} aria-label="Open menu" aria-expanded={menuOpen}>
             <Menu size={20} aria-hidden />
@@ -148,7 +167,6 @@ export function AdminShell({ active, children }: { active: AdminSection; childre
           </button>
           <BrandMark tone="dark" />
         </div>
-        <ThemeButton className={btn.icon} />
       </header>
 
       {menuOpen && (
@@ -158,10 +176,11 @@ export function AdminShell({ active, children }: { active: AdminSection; childre
       )}
 
       <div className="lg:pl-[260px]">
-        <main id="admin-main" className="mx-auto w-full max-w-[1320px] px-4 pb-16 pt-5 sm:px-6 lg:px-10 lg:pt-8">
+        <main id="admin-main" className="mx-auto w-full max-w-[1360px] px-4 pb-16 pt-5 sm:px-6 lg:px-10 lg:pt-8">
           {children}
         </main>
       </div>
     </div>
   )
 }
+

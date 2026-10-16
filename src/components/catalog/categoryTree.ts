@@ -13,9 +13,9 @@ export function findCategory(tree: Category[] | undefined, slug: string | undefi
   return null
 }
 
-/** Leaf categories that actually have products, in tree order. */
+/** Leaf categories in tree order; includes all active categories from backend. */
 export const leafCategories = (tree: Category[] | undefined) =>
-  (tree ?? []).flatMap((root) => (root.children.length ? root.children : [root])).filter((category) => category.productCount > 0)
+  (tree ?? []).flatMap((root) => (root.children.length ? root.children : [root]))
 
 export type CatalogTheme = 'honey' | 'dry-fruits' | 'all'
 

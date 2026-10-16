@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowLeft, CircleDollarSign, CreditCard, History, LifeBuoy, MapPin, Radio, ReceiptText, XCircle } from 'lucide-react'
+import { ArrowLeft, CircleDollarSign, CreditCard, FileText, History, LifeBuoy, MapPin, Printer, Radio, ReceiptText, X, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { Panel } from '../../components/checkout/Panel'
 import { PriceRows } from '../../components/checkout/PriceRows'
@@ -10,16 +10,16 @@ import { CancelOrderDialog } from '../../components/orders/CancelOrderDialog'
 import { DeliveryEstimateCard } from '../../components/orders/DeliveryEstimateCard'
 import { OrderItemsCard } from '../../components/orders/OrderItemsCard'
 import { OrderNotFound } from '../../components/orders/OrderNotFound'
-import { OrderProgress } from '../../components/orders/OrderProgress'
+import { OrderTrackingStepper } from '../../components/common/OrderTrackingStepper'
 import { OrderStatusBadge } from '../../components/orders/OrderStatusBadge'
 import { OrderTimeline } from '../../components/orders/OrderTimeline'
 import { ShipmentCard } from '../../components/orders/ShipmentCard'
 import { isActive, isCancellable, isNotFound, isPayable, paymentMethodLabel } from '../../components/orders/orderHelpers'
-import { PAYMENT_STATUS_LABEL, SHIPPING_METHOD_LABEL } from '../../constants/orderStatus'
+import { PAYMENT_STATUS_LABEL } from '../../constants/orderStatus'
 import { ordersApi, useCancelOrderMutation, useGetOrderQuery } from '../../features/orders/ordersApi'
 import { errorMessage } from '../../lib/http/apiClient'
 import type { Order } from '../../types/api'
-import { formatDate, formatDateTime } from '../../utils/format'
+import { formatDate, formatDateTime, formatMoney, fullName } from '../../utils/format'
 import '../../styles/checkout.css'
 
 const POLL_MS = 30_000
@@ -63,6 +63,7 @@ export function OrderDetailPage({ orderNumber }: { orderNumber: string }) {
 
 function OrderDetail({ order, live }: { order: Order; live: boolean }) {
   const [confirming, setConfirming] = useState(false)
+  const [invoiceOpen, setInvoiceOpen] = useState(false)
   const [cancelOrder, cancelState] = useCancelOrderMutation()
   const payable = isPayable(order.status)
 
@@ -95,6 +96,13 @@ function OrderDetail({ order, live }: { order: Order; live: boolean }) {
           </div>
         </div>
         <div className="flex flex-wrap gap-2.5">
+          <button
+            type="button"
+            onClick={() => setInvoiceOpen(true)}
+            className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-5 py-2.5 text-sm font-bold text-stone-700 shadow-sm transition hover:border-[#173f32] hover:text-[#173f32] dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200"
+          >
+            <Printer size={15} aria-hidden /> Invoice
+          </button>
           {payable && (
             <a href={`#pay/${order.orderNumber}`} className="inline-flex items-center gap-2 rounded-full bg-[#173f32] px-5 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-[#1e5040] dark:bg-amber-300 dark:text-stone-900">
               <CreditCard size={15} aria-hidden /> Pay now
@@ -125,9 +133,17 @@ function OrderDetail({ order, live }: { order: Order; live: boolean }) {
         <div className="grid min-w-0 gap-6">
           <div className="lg:hidden"><DeliveryEstimateCard order={order} /></div>
           {!payable && (
-            <Panel title="Tracking" subtitle={order.status === 'cancelled' ? 'Cancelled' : `${SHIPPING_METHOD_LABEL[order.shippingMethod]} delivery`}>
-              <div className="pt-2 md:px-2 md:pb-2"><OrderProgress order={order} /></div>
-            </Panel>
+            <div className="overflow-hidden">
+              <OrderTrackingStepper
+                status={order.status}
+                createdAt={order.createdAt}
+                paidAt={order.paidAt}
+                shippedAt={order.tracking?.shippedAt}
+                deliveredAt={order.tracking?.deliveredAt}
+                cancelledAt={order.cancelledAt}
+                timeline={order.timeline ?? []}
+              />
+            </div>
           )}
           <OrderItemsCard order={order} />
           <Panel title="Activity" icon={<History size={17} />}>
@@ -177,6 +193,150 @@ function OrderDetail({ order, live }: { order: Order; live: boolean }) {
       </div>
 
       <CancelOrderDialog orderNumber={order.orderNumber} open={confirming} busy={cancelState.isLoading} onConfirm={cancel} onClose={() => setConfirming(false)} />
+      {invoiceOpen && <CustomerInvoiceModal order={order} onClose={() => setInvoiceOpen(false)} />}
+    </div>
+  )
+}
+
+function CustomerInvoiceModal({ order, onClose }: { order: Order; onClose: () => void }) {
+  const handlePrint = () => {
+    window.print()
+  }
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+      <div className="relative max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl sm:p-10 dark:bg-stone-900 dark:border dark:border-stone-800">
+        <div className="flex items-center justify-between border-b border-stone-200 pb-4 dark:border-stone-800">
+          <div className="flex items-center gap-3">
+            <span className="grid size-10 place-items-center rounded-xl bg-emerald-50 text-[#173f32] dark:bg-emerald-950 dark:text-emerald-300">
+              <FileText size={20} />
+            </span>
+            <div>
+              <h2 className="text-lg font-bold text-stone-900 dark:text-white">Tax Invoice</h2>
+              <p className="text-xs text-stone-500">Order #{order.orderNumber}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="inline-flex items-center gap-2 rounded-xl bg-[#173f32] px-4 py-2 text-xs font-bold text-white hover:bg-[#1e5040] shadow-sm transition-colors"
+            >
+              <Printer size={14} /> Print / Save PDF
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="grid size-9 place-items-center rounded-full text-stone-400 hover:bg-stone-100 hover:text-stone-700 dark:hover:bg-stone-800"
+              aria-label="Close"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+
+        {/* Printable Area */}
+        <div className="mt-6 space-y-6 text-xs text-stone-700 dark:text-stone-300">
+          {/* Brand header */}
+          <div className="flex flex-wrap items-start justify-between gap-4 border-b border-stone-100 pb-5 dark:border-stone-800">
+            <div>
+              <p className="font-display text-2xl font-black tracking-tight text-[#173f32] dark:text-amber-200">
+                BOSSCO · NUTRISTOCK
+              </p>
+              <p className="text-[11px] text-stone-500">Pure, Raw &amp; Traceable Organic Harvest</p>
+              <p className="mt-1 text-[11px] text-stone-400">GSTIN: 27AABCB1234F1Z5 • support@bossco.local</p>
+            </div>
+            <div className="text-right">
+              <p className="font-mono text-sm font-bold text-stone-900 dark:text-stone-100">
+                INV-{order.orderNumber}
+              </p>
+              <p className="text-stone-500">Date: {formatDate(order.createdAt, { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+              <p className="text-stone-500 capitalize">Payment Status: <b className="text-emerald-600">{order.paymentStatus || 'Paid'}</b></p>
+            </div>
+          </div>
+
+          {/* Addresses */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-stone-50/70 p-4 rounded-2xl dark:bg-stone-800/50">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-1">
+                Billed To
+              </p>
+              <p className="font-bold text-stone-900 dark:text-stone-100">{fullName(order.billingAddress ?? order.shippingAddress)}</p>
+              <p>{(order.billingAddress ?? order.shippingAddress).line1}</p>
+              {(order.billingAddress ?? order.shippingAddress).line2 && <p>{(order.billingAddress ?? order.shippingAddress).line2}</p>}
+              <p>{(order.billingAddress ?? order.shippingAddress).city}, {(order.billingAddress ?? order.shippingAddress).state} - {(order.billingAddress ?? order.shippingAddress).postalCode}</p>
+              <p className="text-stone-500">Phone: {(order.billingAddress ?? order.shippingAddress).phone}</p>
+              <p className="text-stone-500">Email: {order.contactEmail}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-1">
+                Shipped To
+              </p>
+              <p className="font-bold text-stone-900 dark:text-stone-100">{fullName(order.shippingAddress)}</p>
+              <p>{order.shippingAddress.line1}</p>
+              {order.shippingAddress.line2 && <p>{order.shippingAddress.line2}</p>}
+              <p>{order.shippingAddress.city}, {order.shippingAddress.state} - {order.shippingAddress.postalCode}</p>
+              <p className="text-stone-500">Phone: {order.shippingAddress.phone}</p>
+              <p className="text-stone-500">Delivery: <span className="capitalize">{order.shippingMethod} delivery</span></p>
+            </div>
+          </div>
+
+          {/* Items Table */}
+          <div className="overflow-x-auto rounded-xl border border-stone-200 dark:border-stone-800">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-stone-200 bg-stone-100/60 text-[10px] font-bold uppercase tracking-wider text-stone-500 dark:bg-stone-800/80">
+                  <th className="px-4 py-3">Item Description</th>
+                  <th className="px-3 py-3 text-center">Variant</th>
+                  <th className="px-3 py-3 text-center">Qty</th>
+                  <th className="px-3 py-3 text-right">Unit Price</th>
+                  <th className="px-4 py-3 text-right">Line Total</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-stone-100 dark:divide-stone-800">
+                {order.items.map((item) => (
+                  <tr key={item.id}>
+                    <td className="px-4 py-3 font-semibold text-stone-900 dark:text-stone-100">
+                      {item.productName}
+                    </td>
+                    <td className="px-3 py-3 text-center text-stone-500">{item.variantLabel}</td>
+                    <td className="px-3 py-3 text-center font-bold text-stone-900 dark:text-stone-100">{item.quantity}</td>
+                    <td className="px-3 py-3 text-right text-stone-600 dark:text-stone-400">{formatMoney(item.unitPrice)}</td>
+                    <td className="px-4 py-3 text-right font-bold text-stone-900 dark:text-stone-100">{formatMoney(item.lineTotal)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Totals */}
+          <div className="flex flex-col items-end gap-1.5 pt-2">
+            <div className="flex w-64 justify-between text-xs">
+              <span className="text-stone-500">Subtotal:</span>
+              <span className="font-semibold">{formatMoney(order.subtotal)}</span>
+            </div>
+            {order.discount > 0 && (
+              <div className="flex w-64 justify-between text-xs text-emerald-600">
+                <span>Discount ({order.couponCode || 'Coupon'}):</span>
+                <span>-{formatMoney(order.discount)}</span>
+              </div>
+            )}
+            <div className="flex w-64 justify-between text-xs">
+              <span className="text-stone-500">Shipping:</span>
+              <span className="font-semibold">{order.shippingFee ? formatMoney(order.shippingFee) : 'FREE'}</span>
+            </div>
+            <div className="mt-2 flex w-64 justify-between border-t border-stone-200 pt-2 text-sm font-bold text-stone-900 dark:border-stone-800 dark:text-white">
+              <span>Total Paid:</span>
+              <span className="text-base text-[#173f32] dark:text-amber-300">{formatMoney(order.total)}</span>
+            </div>
+          </div>
+
+          {/* Footer notes */}
+          <div className="border-t border-stone-100 pt-4 text-[11px] text-stone-400 text-center dark:border-stone-800">
+            Thank you for trusting Bossco NutriStock with your organic harvest needs. For any questions, contact us at support@bossco.local.
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

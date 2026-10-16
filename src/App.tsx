@@ -31,7 +31,7 @@ const AdminApp = named(() => import('./pages/admin/AdminApp'), 'AdminApp')
 
 const PAGE_ROUTES = new Set([
   'home', 'honey', 'shop', 'product', 'contact', 'cart', 'checkout', 'pay', 'order-complete', 'orders', 'wishlist',
-  'account', 'my-account', 'admin', 'login', 'register', 'verify-email', 'forgot-password',
+  'account', 'my-account', 'admin', 'login', 'register', 'verify-email', 'forgot-password', 'reset-password',
 ])
 
 type Resolved = { page: ReactNode; chrome?: boolean }
@@ -73,6 +73,8 @@ function resolve(route: Route): Resolved {
       return { page: <RequireAuth><AccountPage tab={second} /></RequireAuth> }
     case 'admin':
       return { page: <RequireAdmin><AdminApp segments={[second, ...rest].filter(Boolean)} /></RequireAdmin>, chrome: false }
+    case 'reset-password':
+      return { page: <AuthPage mode="forgot-password" />, chrome: false }
     default:
       if ((AUTH_MODES as readonly string[]).includes(head)) return { page: <AuthPage mode={head as AuthMode} />, chrome: false }
       return { page: <HomePage /> }

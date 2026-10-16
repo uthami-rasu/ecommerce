@@ -3,6 +3,92 @@
  * dates are ISO strings. Keep in sync with the backend mappers.
  */
 
+// ── Admin Products ──────────────────────────────────────
+
+export type AdminProductListItem = {
+  id: string
+  name: string
+  slug: string
+  category: { id: string; name: string }
+  thumbUrl: string | null
+  price: number
+  totalStock: number
+  variantCount: number
+  stockStatus: 'in_stock' | 'low_stock' | 'out_of_stock'
+  isActive: boolean
+  isFeatured: boolean
+  isTrending: boolean
+  rating: number
+  reviewCount: number
+  updatedAt: string
+}
+
+export type AdminProductQuery = PageQuery & {
+  search?: string
+  categoryId?: string
+  isActive?: boolean
+  stockStatus?: 'in_stock' | 'low_stock' | 'out_of_stock'
+  sort?: 'newest' | 'name' | 'price-low' | 'price-high' | 'stock-low'
+}
+
+export type CreateVariantInput = {
+  label: string
+  sku?: string
+  price: number
+  compareAtPrice?: number | null
+  stock: number
+  sortOrder?: number
+  isActive?: boolean
+}
+
+export type CreateProductInput = {
+  name: string
+  slug?: string
+  subtitle?: string
+  description?: string
+  origin?: string
+  badge?: string | null
+  categoryId: string
+  isActive?: boolean
+  isFeatured?: boolean
+  isTrending?: boolean
+  variants: CreateVariantInput[]
+}
+
+export type AdminCategoryListItem = {
+  id: string
+  name: string
+  slug: string
+  description: string | null
+  imageUrl: string | null
+  parentId: string | null
+  parentName: string | null
+  sortOrder: number
+  isActive: boolean
+  productCount: number
+  createdAt: string
+  updatedAt: string
+}
+
+export type AdminCategoryQuery = PageQuery & {
+  search?: string
+  parentId?: string
+  isActive?: boolean
+  sort?: 'newest' | 'oldest' | 'name' | 'products' | 'order'
+}
+
+export type CreateCategoryInput = {
+  name: string
+  slug?: string
+  description?: string
+  parentId?: string | null
+  sortOrder?: number
+  isActive?: boolean
+}
+
+export type UpdateCategoryInput = Partial<CreateCategoryInput>
+
+
 export type Paginated<T> = {
   data: T[]
   meta: { page: number; limit: number; total: number; totalPages: number }

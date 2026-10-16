@@ -104,7 +104,7 @@ const gramsOf = (size: string) => {
 
 const categoryOptions = (tree: Category[] | undefined, match: CategoryMatch | null, allLabel: string): CategoryOption[] => {
   if (!tree) return []
-  const visible = (category: Category) => category.productCount > 0
+  const visible = (_category: Category) => true
   if (!match) {
     return [
       { slug: '', name: allLabel, depth: 0 },

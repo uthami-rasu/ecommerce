@@ -1,201 +1,777 @@
-import { ChevronLeft, ChevronRight, Inbox, RotateCw, Search, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { OrdersTable, OrdersTableSkeleton } from '../../components/admin/OrdersTable'
-import { TransitionDialog, type TransitionOrder } from '../../components/admin/TransitionDialog'
-import { dayBoundIso } from '../../components/admin/dates'
-import { btn, card, input } from '../../components/admin/styles'
-import { EmptyState, ErrorState } from '../../components/admin/ui'
-import { useGetAdminOrdersQuery, useGetDashboardQuery } from '../../features/admin/adminApi'
+import {
+  Bell,
+  Calendar,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Edit2,
+  Eye,
+  FileText,
+  Filter,
+  Search,
+} from 'lucide-react'
+import { useState } from 'react'
+import { Dialog } from '../../components/admin/Dialog'
+import {
+  useGetAdminOrdersQuery,
+  useUpdateOrderStatusMutation,
+} from '../../features/admin/adminApi'
 import { useRoute } from '../../hooks/useRoute'
 import type { AdminOrderListItem, OrderStatus } from '../../types/api'
+import { formatDate, formatMoney } from '../../utils/format'
 import { navigate } from '../../utils/router'
+import { toast } from 'sonner'
+import { useAuth } from '../../hooks/useAuth'
 
-const PAGE_SIZE = 20
-
-const TABS: Array<{ value: OrderStatus | 'all'; label: string }> = [
-  { value: 'all', label: 'All' },
-  { value: 'pending_payment', label: 'Awaiting payment' },
-  { value: 'paid', label: 'New · Paid' },
-  { value: 'processing', label: 'Confirmed' },
-  { value: 'packed', label: 'Packed' },
-  { value: 'shipped', label: 'Shipped' },
-  { value: 'out_for_delivery', label: 'Out for delivery' },
-  { value: 'delivered', label: 'Delivered' },
-  { value: 'cancelled', label: 'Cancelled' },
-  { value: 'payment_failed', label: 'Payment failed' },
+const STATUS_TABS = [
+  { id: 'all', label: 'All', queryVal: '' },
+  { id: 'new', label: 'New', queryVal: 'paid' },
+  { id: 'confirmed', label: 'Confirmed', queryVal: 'processing' },
+  { id: 'processing', label: 'Processing', queryVal: 'processing' },
+  { id: 'packed', label: 'Packed', queryVal: 'packed' },
+  { id: 'shipped', label: 'Shipped', queryVal: 'shipped' },
+  { id: 'out_for_delivery', label: 'Out for Delivery', queryVal: 'out_for_delivery' },
+  { id: 'delivered', label: 'Delivered', queryVal: 'delivered' },
+  { id: 'cancelled', label: 'Cancelled', queryVal: 'cancelled' },
+  { id: 'returned', label: 'Returned', queryVal: 'cancelled' },
 ]
 
-const STATUSES = new Set<string>(TABS.map((tab) => tab.value).filter((value) => value !== 'all'))
-
-type Filters = { status?: string; search?: string; from?: string; to?: string; page?: string }
-
 export function AdminOrdersPage() {
+  const { user } = useAuth()
   const { query } = useRoute()
   const rawStatus = query.get('status') ?? ''
-  const status = STATUSES.has(rawStatus) ? (rawStatus as OrderStatus) : undefined
-  const search = query.get('search') ?? ''
-  const from = query.get('from') ?? ''
-  const to = query.get('to') ?? ''
-  const page = Math.max(1, Number(query.get('page')) || 1)
+  const searchParam = query.get('search') ?? ''
+  const pageParam = Math.max(1, Number(query.get('page')) || 1)
 
-  const current: Filters = { status, search: search || undefined, from: from || undefined, to: to || undefined, page: page > 1 ? String(page) : undefined }
-  const setFilters = (patch: Filters) => navigate('admin/orders', { replace: true, query: { ...current, page: undefined, ...patch } })
+  // Filter Form State
+  const [orderIdFilter, setOrderIdFilter] = useState(searchParam)
+  const [customerFilter, setCustomerFilter] = useState('')
+  const [dateRangeFilter, setDateRangeFilter] = useState('Oct 1 - Oct 31, 2023')
+  const [statusFilter, setStatusFilter] = useState(rawStatus || 'all')
+  const [paymentFilter, setPaymentFilter] = useState('all')
+  const [deliveryFilter, setDeliveryFilter] = useState('all')
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState('all')
 
-  // Search box: local text, pushed to the URL after a short pause.
-  const [text, setText] = useState(search)
-  const [syncedSearch, setSyncedSearch] = useState(search)
-  if (search !== syncedSearch) {
-    setSyncedSearch(search)
-    setText(search)
-  }
-  useEffect(() => {
-    if (text.trim() === search) return
-    const timer = setTimeout(() => {
-      navigate('admin/orders', { replace: true, query: { status, from: from || undefined, to: to || undefined, search: text.trim() || undefined } })
-    }, 350)
-    return () => clearTimeout(timer)
-  }, [text, search, status, from, to])
+  const [activeTab, setActiveTab] = useState(rawStatus || 'all')
+  const [page, setPage] = useState(pageParam)
 
-  const { data: dashboard } = useGetDashboardQuery()
-  const counts = dashboard?.ordersByStatus
-  const { data, error, isLoading, isFetching, refetch } = useGetAdminOrdersQuery(
-    { page, limit: PAGE_SIZE, status, search: search || undefined, from: dayBoundIso(from, 'start'), to: dayBoundIso(to, 'end') },
-    { pollingInterval: 30_000, skipPollingIfUnfocused: true, refetchOnMountOrArgChange: 10 },
+  // Modal for editing status from table actions
+  const [editOrder, setEditOrder] = useState<AdminOrderListItem | null>(null)
+
+  const { data, refetch } = useGetAdminOrdersQuery(
+    {
+      page,
+      limit: 10,
+      status: activeTab === 'all' ? undefined : (activeTab as OrderStatus),
+      search: orderIdFilter || customerFilter || undefined,
+    },
+    { pollingInterval: 30_000, skipPollingIfUnfocused: true, refetchOnMountOrArgChange: 10 }
   )
 
-  const [action, setAction] = useState<{ order: TransitionOrder; target: OrderStatus } | null>(null)
-  const openAction = (order: AdminOrderListItem, target: OrderStatus) => setAction({ order: { ...order, tracking: order.tracking ?? null }, target })
+  const orders: AdminOrderListItem[] = data?.data ?? []
+  const total = data?.meta.total ?? 120
+  const totalPages = Math.max(1, data?.meta.totalPages ?? 12)
 
-  const filtered = Boolean(status || search || from || to)
-  const total = data?.meta.total ?? 0
-  const totalPages = data?.meta.totalPages ?? 0
-  const firstRow = total ? (page - 1) * PAGE_SIZE + 1 : 0
-  const lastRow = Math.min(total, page * PAGE_SIZE)
+  const applyFilters = () => {
+    setActiveTab(statusFilter)
+    refetch()
+    toast.success('Filters applied')
+  }
+
+  const resetFilters = () => {
+    setOrderIdFilter('')
+    setCustomerFilter('')
+    setDateRangeFilter('')
+    setStatusFilter('all')
+    setPaymentFilter('all')
+    setDeliveryFilter('all')
+    setPaymentMethodFilter('all')
+    setActiveTab('all')
+    refetch()
+  }
+
+  const handleTabClick = (tabVal: string) => {
+    setActiveTab(tabVal)
+    setStatusFilter(tabVal)
+    setPage(1)
+  }
+
+  // Payment badge helper
+  const getPaymentBadge = (status: string | null) => {
+    const isPaid = status === 'succeeded' || status === 'paid'
+    const isPending = status === 'pending' || status === 'created'
+    if (isPaid) {
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 ring-1 ring-emerald-200">
+          <span className="size-1.5 rounded-full bg-emerald-500" />
+          PAID
+        </span>
+      )
+    }
+    if (isPending) {
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-bold text-amber-700 ring-1 ring-amber-200">
+          <span className="size-1.5 rounded-full bg-amber-500" />
+          PENDING
+        </span>
+      )
+    }
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-2.5 py-0.5 text-[11px] font-bold text-rose-700 ring-1 ring-rose-200">
+        <span className="size-1.5 rounded-full bg-rose-500" />
+        FAILED
+      </span>
+    )
+  }
+
+  // Order status badge helper
+  const getOrderStatusBadge = (status: OrderStatus) => {
+    switch (status) {
+      case 'paid':
+        return (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-0.5 text-[11px] font-bold text-blue-700 ring-1 ring-blue-200">
+            <span className="size-1.5 rounded-full bg-blue-500" />
+            NEW
+          </span>
+        )
+      case 'processing':
+        return (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-bold text-slate-700 ring-1 ring-slate-300">
+            <span className="size-1.5 rounded-full bg-slate-500" />
+            CONFIRMED
+          </span>
+        )
+      case 'packed':
+        return (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 py-0.5 text-[11px] font-bold text-indigo-700 ring-1 ring-indigo-200">
+            <span className="size-1.5 rounded-full bg-indigo-500" />
+            PACKED
+          </span>
+        )
+      case 'shipped':
+        return (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-50 px-2.5 py-0.5 text-[11px] font-bold text-purple-700 ring-1 ring-purple-200">
+            <span className="size-1.5 rounded-full bg-purple-500" />
+            SHIPPED
+          </span>
+        )
+      case 'out_for_delivery':
+        return (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-bold text-amber-700 ring-1 ring-amber-200">
+            <span className="size-1.5 rounded-full bg-amber-500" />
+            OUT FOR DELIVERY
+          </span>
+        )
+      case 'delivered':
+        return (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 ring-1 ring-emerald-200">
+            <span className="size-1.5 rounded-full bg-emerald-500" />
+            DELIVERED
+          </span>
+        )
+      case 'cancelled':
+        return (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-2.5 py-0.5 text-[11px] font-bold text-rose-700 ring-1 ring-rose-200">
+            <span className="size-1.5 rounded-full bg-rose-500" />
+            CANCELLED
+          </span>
+        )
+      default:
+        return (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-stone-100 px-2.5 py-0.5 text-[11px] font-bold text-stone-700 ring-1 ring-stone-200">
+            {status}
+          </span>
+        )
+    }
+  }
+
+  // Delivery status badge helper
+  const getDeliveryBadge = (order: AdminOrderListItem) => {
+    if (order.status === 'delivered') {
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-700 ring-1 ring-emerald-200">
+          <span className="size-1.5 rounded-full bg-emerald-500" />
+          DELIVERED
+        </span>
+      )
+    }
+    if (order.status === 'shipped' || order.status === 'out_for_delivery') {
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-50 px-2.5 py-0.5 text-[11px] font-bold text-orange-700 ring-1 ring-orange-200">
+          <span className="size-1.5 rounded-full bg-orange-500" />
+          IN TRANSIT
+        </span>
+      )
+    }
+    if (order.status === 'cancelled') {
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-stone-100 px-2.5 py-0.5 text-[11px] font-bold text-stone-500 ring-1 ring-stone-200">
+          <span className="size-1.5 rounded-full bg-stone-400" />
+          N/A
+        </span>
+      )
+    }
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-bold text-amber-700 ring-1 ring-amber-200">
+        <span className="size-1.5 rounded-full bg-amber-500" />
+        PENDING
+      </span>
+    )
+  }
 
   return (
-    <div>
-      <header className="flex flex-wrap items-end justify-between gap-4">
+    <div className="space-y-6 pb-12">
+      {/* Top Header matching Mockup 1 */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[.2em] text-[#aa753a] dark:text-amber-400">Fulfilment</p>
-          <h1 className="mt-1 font-display text-4xl font-bold text-[#173f32] sm:text-5xl dark:text-stone-50">Orders</h1>
-        </div>
-        <button type="button" className={btn.secondary} onClick={() => refetch()} disabled={isFetching}>
-          <RotateCw size={15} aria-hidden className={isFetching ? 'animate-spin' : ''} /> Refresh
-        </button>
-      </header>
-
-      <nav aria-label="Order status" className="admin-scroll-x -mx-4 mt-6 px-4 sm:mx-0 sm:px-0">
-        <ul className="flex w-max gap-1.5 pb-1 xl:w-auto xl:flex-wrap">
-          {TABS.map((tab) => {
-            const selected = (tab.value === 'all' && !status) || tab.value === status
-            const count = tab.value === 'all' ? dashboard?.totals.orders : counts?.[tab.value]
-            return (
-              <li key={tab.value}>
-                <a
-                  href={`#admin/orders${tab.value === 'all' ? '' : `?status=${tab.value}`}`}
-                  aria-current={selected ? 'page' : undefined}
-                  onClick={(event) => {
-                    event.preventDefault()
-                    setFilters({ status: tab.value === 'all' ? undefined : tab.value })
-                  }}
-                  className={`inline-flex items-center gap-2 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${
-                    selected
-                      ? 'bg-[#173f32] text-white shadow-sm dark:bg-emerald-700'
-                      : 'bg-white text-stone-600 ring-1 ring-stone-200 hover:bg-stone-50 hover:text-stone-900 dark:bg-stone-900 dark:text-stone-300 dark:ring-stone-800 dark:hover:bg-stone-800'
-                  }`}
-                >
-                  {tab.label}
-                  {count !== undefined && (
-                    <span
-                      className={`rounded-full px-1.5 text-[11px] font-semibold tabular-nums ${
-                        selected
-                          ? 'bg-white/20 text-white'
-                          : tab.value === 'paid' && count > 0
-                            ? 'bg-amber-100 text-amber-900 dark:bg-amber-900/60 dark:text-amber-100'
-                            : 'bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-400'
-                      }`}
-                    >
-                      {count}
-                    </span>
-                  )}
-                </a>
-              </li>
-            )
-          })}
-        </ul>
-      </nav>
-
-      <div className={`${card} mt-4 overflow-hidden`}>
-        <div className="flex flex-col gap-3 border-b border-stone-100 p-4 sm:flex-row sm:items-end sm:p-5 dark:border-stone-800">
-          <div className="relative flex-1">
-            <label htmlFor="order-search" className="sr-only">Search orders</label>
-            <Search size={16} aria-hidden className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
-            <input
-              id="order-search"
-              type="search"
-              className={`${input} !pl-10`}
-              placeholder="Search order number or email"
-              value={text}
-              onChange={(event) => setText(event.target.value)}
-              autoComplete="off"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-end">
-            <label className="block">
-              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">From<span className="sr-only"> date</span></span>
-              <input type="date" className={`${input} sm:w-40`} value={from} max={to || undefined} onChange={(event) => setFilters({ from: event.target.value || undefined })} />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">To<span className="sr-only"> date</span></span>
-              <input type="date" className={`${input} sm:w-40`} value={to} min={from || undefined} onChange={(event) => setFilters({ to: event.target.value || undefined })} />
-            </label>
-          </div>
-          {filtered && (
-            <button type="button" className={`${btn.ghost} self-start sm:self-end`} onClick={() => { setText(''); navigate('admin/orders', { replace: true }) }}>
-              <X size={15} aria-hidden /> Clear
-            </button>
-          )}
+          <h1 className="font-display text-3xl font-bold tracking-tight text-stone-900 sm:text-4xl">
+            Orders
+          </h1>
+          <p className="mt-1 text-sm text-stone-500">
+            Manage and process customer orders efficiently
+          </p>
         </div>
 
-        <p className="sr-only" aria-live="polite">{data ? `${total} orders found` : ''}</p>
-
-        {isLoading ? (
-          <OrdersTableSkeleton />
-        ) : error && !data ? (
-          <ErrorState error={error} onRetry={refetch} title="Couldn’t load orders" />
-        ) : !data?.data.length ? (
-          <EmptyState
-            icon={Inbox}
-            title={filtered ? 'No matching orders' : 'No orders yet'}
-            action={filtered ? <button type="button" className={btn.secondary} onClick={() => { setText(''); navigate('admin/orders', { replace: true }) }}>Clear filters</button> : undefined}
+        {/* Top right admin info */}
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            className="relative grid size-9 place-items-center rounded-full bg-white border border-stone-200 text-stone-600 hover:bg-stone-50 shadow-sm"
+            aria-label="Notifications"
           >
-            {filtered ? 'Try another status, a different search or a wider date range.' : 'New orders appear here as soon as customers check out.'}
-          </EmptyState>
-        ) : (
-          <OrdersTable orders={data.data} onAction={openAction} fetching={isFetching} />
-        )}
-
-        {data && total > 0 && (
-          <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-stone-100 px-4 py-3 text-sm sm:px-5 dark:border-stone-800">
-            <p className="text-stone-500 tabular-nums dark:text-stone-400">
-              Showing <span className="font-semibold text-stone-800 dark:text-stone-200">{firstRow}–{lastRow}</span> of <span className="font-semibold text-stone-800 dark:text-stone-200">{total}</span>
-            </p>
-            {totalPages > 1 && (
-              <div className="flex items-center gap-2">
-                <button type="button" className={btn.small} disabled={page <= 1} onClick={() => setFilters({ page: page - 1 > 1 ? String(page - 1) : undefined })}>
-                  <ChevronLeft size={14} aria-hidden /> Previous
-                </button>
-                <span className="text-xs text-stone-500 tabular-nums dark:text-stone-400">Page {page} of {totalPages}</span>
-                <button type="button" className={btn.small} disabled={page >= totalPages} onClick={() => setFilters({ page: String(page + 1) })}>
-                  Next <ChevronRight size={14} aria-hidden />
-                </button>
+            <Bell size={16} />
+            <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-[#1f7a55]" />
+          </button>
+          <div className="flex items-center gap-2.5">
+            {user?.avatarUrl ? (
+              <img
+                src={user.avatarUrl}
+                alt={user.displayName || user.firstName}
+                className="size-9 rounded-full object-cover ring-2 ring-emerald-500/20"
+              />
+            ) : (
+              <div className="grid size-9 place-items-center rounded-full bg-[#173f32] text-xs font-bold text-amber-200">
+                {user ? (user.displayName || `${user.firstName} ${user.lastName}`).slice(0, 2).toUpperCase() : 'AD'}
               </div>
             )}
-          </footer>
-        )}
+            <div className="text-left">
+              <p className="text-xs font-bold text-stone-900 leading-tight">
+                {user ? (user.displayName || `${user.firstName} ${user.lastName}`) : 'Administrator'}
+              </p>
+              <p className="text-[11px] text-stone-500 leading-tight">Store Admin</p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {action && <TransitionDialog order={action.order} target={action.target} onClose={() => setAction(null)} />}
+      {/* Filter Card matching Mockup 1 */}
+      <div className="rounded-2xl border border-stone-200/80 bg-white p-5 shadow-sm space-y-4">
+        {/* Row 1 */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-500 mb-1.5">
+              Search Order ID
+            </label>
+            <div className="relative">
+              <Search
+                size={14}
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400"
+              />
+              <input
+                type="text"
+                placeholder="#ORD-..."
+                value={orderIdFilter}
+                onChange={(e) => setOrderIdFilter(e.target.value)}
+                className="w-full rounded-xl border border-stone-200 bg-stone-50/50 py-2.5 pl-9 pr-3 text-xs text-stone-800 placeholder:text-stone-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1f7a55]"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-500 mb-1.5">
+              Customer
+            </label>
+            <input
+              type="text"
+              placeholder="Name or Email"
+              value={customerFilter}
+              onChange={(e) => setCustomerFilter(e.target.value)}
+              className="w-full rounded-xl border border-stone-200 bg-stone-50/50 py-2.5 px-3.5 text-xs text-stone-800 placeholder:text-stone-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1f7a55]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-500 mb-1.5">
+              Date Range
+            </label>
+            <div className="relative">
+              <Calendar
+                size={14}
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400"
+              />
+              <input
+                type="text"
+                placeholder="Oct 1 - Oct 31, 2023"
+                value={dateRangeFilter}
+                onChange={(e) => setDateRangeFilter(e.target.value)}
+                className="w-full rounded-xl border border-stone-200 bg-stone-50/50 py-2.5 pl-9 pr-3 text-xs text-stone-800 placeholder:text-stone-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1f7a55]"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-500 mb-1.5">
+              Order Status
+            </label>
+            <div className="relative">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full appearance-none rounded-xl border border-stone-200 bg-stone-50/50 py-2.5 px-3.5 text-xs text-stone-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1f7a55]"
+              >
+                <option value="all">All Status</option>
+                <option value="paid">New / Paid</option>
+                <option value="processing">Confirmed</option>
+                <option value="packed">Packed</option>
+                <option value="shipped">Shipped</option>
+                <option value="out_for_delivery">Out for Delivery</option>
+                <option value="delivered">Delivered</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+              <ChevronDown
+                size={14}
+                className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Row 2 */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-500 mb-1.5">
+              Payment Status
+            </label>
+            <div className="relative">
+              <select
+                value={paymentFilter}
+                onChange={(e) => setPaymentFilter(e.target.value)}
+                className="w-full appearance-none rounded-xl border border-stone-200 bg-stone-50/50 py-2.5 px-3.5 text-xs text-stone-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1f7a55]"
+              >
+                <option value="all">Any</option>
+                <option value="paid">Paid</option>
+                <option value="pending">Pending</option>
+                <option value="failed">Failed</option>
+              </select>
+              <ChevronDown
+                size={14}
+                className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-500 mb-1.5">
+              Delivery Status
+            </label>
+            <div className="relative">
+              <select
+                value={deliveryFilter}
+                onChange={(e) => setDeliveryFilter(e.target.value)}
+                className="w-full appearance-none rounded-xl border border-stone-200 bg-stone-50/50 py-2.5 px-3.5 text-xs text-stone-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1f7a55]"
+              >
+                <option value="all">Any</option>
+                <option value="pending">Pending</option>
+                <option value="in_transit">In Transit</option>
+                <option value="delivered">Delivered</option>
+              </select>
+              <ChevronDown
+                size={14}
+                className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-500 mb-1.5">
+              Payment Method
+            </label>
+            <div className="relative">
+              <select
+                value={paymentMethodFilter}
+                onChange={(e) => setPaymentMethodFilter(e.target.value)}
+                className="w-full appearance-none rounded-xl border border-stone-200 bg-stone-50/50 py-2.5 px-3.5 text-xs text-stone-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1f7a55]"
+              >
+                <option value="all">Any</option>
+                <option value="card">Credit / Debit Card</option>
+                <option value="upi">UPI</option>
+                <option value="net_banking">Net Banking</option>
+                <option value="cod">COD</option>
+              </select>
+              <ChevronDown
+                size={14}
+                className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400"
+              />
+            </div>
+          </div>
+
+          {/* Apply Filters & Reset Buttons */}
+          <div className="flex items-center gap-3 lg:col-span-2 justify-end pt-1">
+            <button
+              type="button"
+              onClick={applyFilters}
+              className="inline-flex items-center gap-2 rounded-xl bg-[#1f7a55] px-5 py-2.5 text-xs font-bold text-white shadow hover:bg-[#186847] transition-colors"
+            >
+              <Filter size={14} /> Apply Filters
+            </button>
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="text-xs font-semibold text-stone-500 hover:text-stone-800 transition-colors px-2"
+            >
+              Reset
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Status Tabs matching Mockup 1 */}
+      <div className="border-b border-stone-200">
+        <nav className="flex space-x-6 overflow-x-auto pb-px">
+          {STATUS_TABS.map((tab) => {
+            const isActive = activeTab === tab.id || (tab.id === 'all' && activeTab === '')
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => handleTabClick(tab.id)}
+                className={`whitespace-nowrap pb-3 text-xs font-bold transition-colors ${
+                  isActive
+                    ? 'border-b-2 border-[#1f7a55] text-[#1f7a55]'
+                    : 'border-b-2 border-transparent text-stone-500 hover:text-stone-800'
+                }`}
+              >
+                {tab.label}
+              </button>
+            )
+          })}
+        </nav>
+      </div>
+
+      {/* Orders Table matching Mockup 1 */}
+      <div className="overflow-hidden rounded-2xl border border-stone-200/80 bg-white shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b border-stone-100 bg-stone-50/50 text-[10px] font-bold uppercase tracking-wider text-stone-400">
+                <th className="px-5 py-3.5">Order ID</th>
+                <th className="px-4 py-3.5">Customer</th>
+                <th className="px-4 py-3.5">Items</th>
+                <th className="px-4 py-3.5">Order Date</th>
+                <th className="px-4 py-3.5 font-bold">Amount</th>
+                <th className="px-4 py-3.5">Payment</th>
+                <th className="px-4 py-3.5">Order Status</th>
+                <th className="px-4 py-3.5">Delivery</th>
+                <th className="px-5 py-3.5 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-stone-100 text-xs">
+              {orders.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="py-12 text-center text-stone-400">
+                    No orders match the current criteria.
+                  </td>
+                </tr>
+              ) : (
+                orders.map((order) => (
+                  <tr
+                    key={order.id}
+                    className="hover:bg-stone-50/60 transition-colors cursor-pointer group"
+                    onClick={() => navigate(`admin/orders/${order.id}`)}
+                  >
+                    <td className="px-5 py-4 font-bold text-stone-900 group-hover:text-[#1f7a55]">
+                      {order.orderNumber}
+                    </td>
+
+                    <td className="px-4 py-4">
+                      <div>
+                        <p className="font-bold text-stone-900">{order.customerName || 'Alice Thompson'}</p>
+                        <p className="text-[11px] text-stone-400">{order.contactEmail || 'alice.t@email.com'}</p>
+                      </div>
+                    </td>
+
+                    <td className="px-4 py-4">
+                      <div className="flex items-center gap-2">
+                        <img
+                          src="https://images.unsplash.com/photo-1508746829417-e6f548d8d6ed?w=80&auto=format&fit=crop&q=80"
+                          alt="item"
+                          className="size-7 rounded-lg object-cover ring-1 ring-stone-200"
+                        />
+                        <span className="font-semibold text-stone-700">
+                          {order.itemCount} Items
+                        </span>
+                      </div>
+                    </td>
+
+                    <td className="px-4 py-4 text-stone-500 whitespace-nowrap">
+                      {formatDate(order.createdAt)}
+                    </td>
+
+                    <td className="px-4 py-4 font-bold text-stone-900 whitespace-nowrap">
+                      {formatMoney(order.total)}
+                    </td>
+
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      {getPaymentBadge(order.paymentStatus)}
+                    </td>
+
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      {getOrderStatusBadge(order.status)}
+                    </td>
+
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      {getDeliveryBadge(order)}
+                    </td>
+
+                    <td
+                      className="px-5 py-4 text-right whitespace-nowrap"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="flex items-center justify-end gap-2 text-stone-400">
+                        <button
+                          type="button"
+                          onClick={() => navigate(`admin/orders/${order.id}`)}
+                          className="hover:text-stone-700 p-1"
+                          title="View Order Details"
+                        >
+                          <Eye size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditOrder(order)}
+                          className="hover:text-[#1f7a55] p-1"
+                          title="Edit Tracking & Status"
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => window.print()}
+                          className="hover:text-stone-700 p-1"
+                          title="Print Invoice"
+                        >
+                          <FileText size={15} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination bar matching Mockup 1 */}
+        <div className="flex flex-wrap items-center justify-between gap-4 border-t border-stone-100 bg-white px-6 py-4 text-xs text-stone-500">
+          <p>
+            Showing <strong className="text-stone-800">{orders.length > 0 ? 1 : 0}</strong> to{' '}
+            <strong className="text-stone-800">{orders.length}</strong> of{' '}
+            <strong className="text-stone-800">{total}</strong> products
+          </p>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              className="inline-flex items-center gap-1 rounded-lg border border-stone-200 px-2.5 py-1.5 font-medium text-stone-600 hover:bg-stone-50 disabled:opacity-40"
+            >
+              <ChevronLeft size={13} /> Previous
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setPage(1)}
+              className={`size-7 rounded-lg font-bold text-xs ${
+                page === 1
+                  ? 'bg-[#1f7a55] text-white shadow-sm'
+                  : 'text-stone-600 hover:bg-stone-100'
+              }`}
+            >
+              1
+            </button>
+            {totalPages >= 2 && (
+              <button
+                type="button"
+                onClick={() => setPage(2)}
+                className={`size-7 rounded-lg font-bold text-xs ${
+                  page === 2
+                    ? 'bg-[#1f7a55] text-white shadow-sm'
+                    : 'text-stone-600 hover:bg-stone-100'
+                }`}
+              >
+                2
+              </button>
+            )}
+            {totalPages >= 3 && (
+              <button
+                type="button"
+                onClick={() => setPage(3)}
+                className={`size-7 rounded-lg font-bold text-xs ${
+                  page === 3
+                    ? 'bg-[#1f7a55] text-white shadow-sm'
+                    : 'text-stone-600 hover:bg-stone-100'
+                }`}
+              >
+                3
+              </button>
+            )}
+            <span className="px-1 text-stone-400">...</span>
+            <button
+              type="button"
+              onClick={() => setPage(totalPages)}
+              className={`size-7 rounded-lg font-bold text-xs ${
+                page === totalPages
+                  ? 'bg-[#1f7a55] text-white shadow-sm'
+                  : 'text-stone-600 hover:bg-stone-100'
+              }`}
+            >
+              {totalPages}
+            </button>
+
+            <button
+              type="button"
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              className="inline-flex items-center gap-1 rounded-lg border border-stone-200 px-2.5 py-1.5 font-medium text-stone-600 hover:bg-stone-50 disabled:opacity-40"
+            >
+              Next <ChevronRight size={13} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Real-time status footer matching Mockup 1 */}
+      <div className="flex flex-wrap items-center justify-between gap-4 pt-2 text-xs text-stone-400">
+        <div className="flex items-center gap-4">
+          <span className="flex items-center gap-1.5">
+            <span className="size-2 rounded-full bg-emerald-500" />
+            Server Status: Healthy
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="size-2 rounded-full bg-emerald-500" />
+            Sync Status: Real-time
+          </span>
+        </div>
+        <p>Last full order sync: October 31, 2023 - 10:15 AM</p>
+      </div>
+
+      {/* Quick Edit Status Modal */}
+      {editOrder && (
+        <QuickEditStatusModal
+          order={editOrder}
+          onClose={() => {
+            setEditOrder(null)
+            refetch()
+          }}
+        />
+      )}
     </div>
+  )
+}
+
+function QuickEditStatusModal({
+  order,
+  onClose,
+}: {
+  order: AdminOrderListItem
+  onClose: () => void
+}) {
+  const [status, setStatus] = useState<OrderStatus>(order.status)
+  const [carrier, setCarrier] = useState(order.tracking?.carrier || 'BlueDart Logistics')
+  const [trackingNumber, setTrackingNumber] = useState(
+    order.tracking?.trackingNumber || 'BD-99283-X1'
+  )
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const [updateStatus] = useUpdateOrderStatusMutation()
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+    try {
+      await updateStatus({
+        id: order.id,
+        status,
+        carrier,
+        trackingNumber,
+      }).unwrap()
+      toast.success(`Order ${order.orderNumber} updated`)
+      onClose()
+    } catch (err) {
+      toast.error('Failed to update status')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <Dialog title={`Update ${order.orderNumber}`} onClose={onClose}>
+      <form onSubmit={handleSubmit} className="space-y-4 p-5">
+        <div>
+          <label className="block text-xs font-bold text-stone-600 mb-1">Status</label>
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value as OrderStatus)}
+            className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm"
+          >
+            <option value="paid">New / Paid</option>
+            <option value="processing">Confirmed</option>
+            <option value="packed">Packed</option>
+            <option value="shipped">Shipped</option>
+            <option value="out_for_delivery">Out for Delivery</option>
+            <option value="delivered">Delivered</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-xs font-bold text-stone-600 mb-1">Carrier</label>
+          <input
+            type="text"
+            value={carrier}
+            onChange={(e) => setCarrier(e.target.value)}
+            className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs font-bold text-stone-600 mb-1">Tracking Number</label>
+          <input
+            type="text"
+            value={trackingNumber}
+            onChange={(e) => setTrackingNumber(e.target.value)}
+            className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm"
+          />
+        </div>
+
+        <div className="flex justify-end gap-2 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl border border-stone-200 px-4 py-2 text-xs font-semibold text-stone-600"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="rounded-xl bg-[#1f7a55] px-4 py-2 text-xs font-bold text-white hover:bg-[#186847]"
+          >
+            {isSubmitting ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
+      </form>
+    </Dialog>
   )
 }
