@@ -175,6 +175,13 @@ function ProductRow({
       <td className="px-4 py-3">
         <div className="flex items-center gap-1">
           <a
+            href={`#admin/products/${product.id}/edit`}
+            title="Edit product"
+            className="grid size-7 place-items-center rounded-lg text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-700 dark:hover:bg-stone-700 dark:hover:text-stone-200"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /></svg>
+          </a>
+          <a
             href={`#product/${product.slug}`}
             target="_blank"
             rel="noreferrer"

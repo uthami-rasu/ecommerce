@@ -55,6 +55,38 @@ export type CreateProductInput = {
   variants: CreateVariantInput[]
 }
 
+export type UpdateProductInput = Partial<Omit<CreateProductInput, 'variants'>>
+
+export type AdminProductDetail = {
+  id: string
+  name: string
+  slug: string
+  subtitle: string | null
+  description: string | null
+  origin: string | null
+  badge: string | null
+  categoryId: string
+  isActive: boolean
+  isFeatured: boolean
+  isTrending: boolean
+  price: number
+  rating: number
+  reviewCount: number
+  variants: Array<{
+    id: string
+    label: string
+    sku: string
+    price: number
+    compareAtPrice: number | null
+    stock: number
+    sortOrder: number
+    isActive: boolean
+  }>
+  images: Array<{ id: string; url: string; mediumUrl: string; thumbUrl: string; alt: string | null; sortOrder: number }>
+  createdAt: string
+  updatedAt: string
+}
+
 export type AdminCategoryListItem = {
   id: string
   name: string

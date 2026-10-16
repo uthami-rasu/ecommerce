@@ -9,8 +9,9 @@ import {
   FileText,
   Filter,
   Search,
+  ShoppingBag,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Dialog } from '../../components/admin/Dialog'
 import {
   useGetAdminOrdersQuery,
@@ -22,6 +23,8 @@ import { formatDate, formatMoney } from '../../utils/format'
 import { navigate } from '../../utils/router'
 import { toast } from 'sonner'
 import { useAuth } from '../../hooks/useAuth'
+
+const ORDERS_LIMIT = 10
 
 const STATUS_TABS = [
   { id: 'all', label: 'All', queryVal: '' },
@@ -46,7 +49,7 @@ export function AdminOrdersPage() {
   // Filter Form State
   const [orderIdFilter, setOrderIdFilter] = useState(searchParam)
   const [customerFilter, setCustomerFilter] = useState('')
-  const [dateRangeFilter, setDateRangeFilter] = useState('Oct 1 - Oct 31, 2023')
+  const [dateRangeFilter, setDateRangeFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState(rawStatus || 'all')
   const [paymentFilter, setPaymentFilter] = useState('all')
   const [deliveryFilter, setDeliveryFilter] = useState('all')
@@ -54,6 +57,21 @@ export function AdminOrdersPage() {
 
   const [activeTab, setActiveTab] = useState(rawStatus || 'all')
   const [page, setPage] = useState(pageParam)
+  const [debouncedSearch, setDebouncedSearch] = useState(searchParam)
+  const firstSearch = useRef(true)
+
+  // Debounce text search and reset to first page (skip initial mount to keep ?page= deep links).
+  useEffect(() => {
+    if (firstSearch.current) {
+      firstSearch.current = false
+      return
+    }
+    const t = setTimeout(() => {
+      setDebouncedSearch(orderIdFilter || customerFilter || '')
+      setPage(1)
+    }, 300)
+    return () => clearTimeout(t)
+  }, [orderIdFilter, customerFilter])
 
   // Modal for editing status from table actions
   const [editOrder, setEditOrder] = useState<AdminOrderListItem | null>(null)
@@ -61,19 +79,26 @@ export function AdminOrdersPage() {
   const { data, refetch } = useGetAdminOrdersQuery(
     {
       page,
-      limit: 10,
+      limit: ORDERS_LIMIT,
       status: activeTab === 'all' ? undefined : (activeTab as OrderStatus),
-      search: orderIdFilter || customerFilter || undefined,
+      search: debouncedSearch || undefined,
     },
     { pollingInterval: 30_000, skipPollingIfUnfocused: true, refetchOnMountOrArgChange: 10 }
   )
 
   const orders: AdminOrderListItem[] = data?.data ?? []
-  const total = data?.meta.total ?? 120
-  const totalPages = Math.max(1, data?.meta.totalPages ?? 12)
+  const total = data?.meta.total ?? 0
+  const limit = data?.meta.limit ?? ORDERS_LIMIT
+  const totalPages = Math.max(1, data?.meta.totalPages ?? 1)
+
+  // Clamp page when filters shrink totalPages.
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages)
+  }, [page, totalPages])
 
   const applyFilters = () => {
     setActiveTab(statusFilter)
+    setPage(1)
     refetch()
     toast.success('Filters applied')
   }
@@ -87,6 +112,7 @@ export function AdminOrdersPage() {
     setDeliveryFilter('all')
     setPaymentMethodFilter('all')
     setActiveTab('all')
+    setPage(1)
     refetch()
   }
 
@@ -311,7 +337,7 @@ export function AdminOrdersPage() {
               />
               <input
                 type="text"
-                placeholder="Oct 1 - Oct 31, 2023"
+                placeholder="Filter by date range..."
                 value={dateRangeFilter}
                 onChange={(e) => setDateRangeFilter(e.target.value)}
                 className="w-full rounded-xl border border-stone-200 bg-stone-50/50 py-2.5 pl-9 pr-3 text-xs text-stone-800 placeholder:text-stone-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1f7a55]"
@@ -495,20 +521,18 @@ export function AdminOrdersPage() {
 
                     <td className="px-4 py-4">
                       <div>
-                        <p className="font-bold text-stone-900">{order.customerName || 'Alice Thompson'}</p>
-                        <p className="text-[11px] text-stone-400">{order.contactEmail || 'alice.t@email.com'}</p>
+                        <p className="font-bold text-stone-900">{order.customerName || order.contactEmail || 'Guest Customer'}</p>
+                        <p className="text-[11px] text-stone-400">{order.contactEmail || '—'}</p>
                       </div>
                     </td>
 
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-2">
-                        <img
-                          src="https://images.unsplash.com/photo-1508746829417-e6f548d8d6ed?w=80&auto=format&fit=crop&q=80"
-                          alt="item"
-                          className="size-7 rounded-lg object-cover ring-1 ring-stone-200"
-                        />
+                        <span className="grid size-7 place-items-center rounded-lg bg-stone-100 text-stone-600 font-bold text-xs ring-1 ring-stone-200">
+                          <ShoppingBag size={13} />
+                        </span>
                         <span className="font-semibold text-stone-700">
-                          {order.itemCount} Items
+                          {order.itemCount} {order.itemCount === 1 ? 'Item' : 'Items'}
                         </span>
                       </div>
                     </td>
@@ -574,9 +598,9 @@ export function AdminOrdersPage() {
         {/* Pagination bar matching Mockup 1 */}
         <div className="flex flex-wrap items-center justify-between gap-4 border-t border-stone-100 bg-white px-6 py-4 text-xs text-stone-500">
           <p>
-            Showing <strong className="text-stone-800">{orders.length > 0 ? 1 : 0}</strong> to{' '}
-            <strong className="text-stone-800">{orders.length}</strong> of{' '}
-            <strong className="text-stone-800">{total}</strong> products
+            Showing <strong className="text-stone-800">{total === 0 ? 0 : (page - 1) * limit + 1}</strong> to{' '}
+            <strong className="text-stone-800">{Math.min(page * limit, total)}</strong> of{' '}
+            <strong className="text-stone-800">{total}</strong> orders
           </p>
 
           <div className="flex items-center gap-1.5">
@@ -589,55 +613,36 @@ export function AdminOrdersPage() {
               <ChevronLeft size={13} /> Previous
             </button>
 
-            <button
-              type="button"
-              onClick={() => setPage(1)}
-              className={`size-7 rounded-lg font-bold text-xs ${
-                page === 1
-                  ? 'bg-[#1f7a55] text-white shadow-sm'
-                  : 'text-stone-600 hover:bg-stone-100'
-              }`}
-            >
-              1
-            </button>
-            {totalPages >= 2 && (
-              <button
-                type="button"
-                onClick={() => setPage(2)}
-                className={`size-7 rounded-lg font-bold text-xs ${
-                  page === 2
-                    ? 'bg-[#1f7a55] text-white shadow-sm'
-                    : 'text-stone-600 hover:bg-stone-100'
-                }`}
-              >
-                2
-              </button>
-            )}
-            {totalPages >= 3 && (
-              <button
-                type="button"
-                onClick={() => setPage(3)}
-                className={`size-7 rounded-lg font-bold text-xs ${
-                  page === 3
-                    ? 'bg-[#1f7a55] text-white shadow-sm'
-                    : 'text-stone-600 hover:bg-stone-100'
-                }`}
-              >
-                3
-              </button>
-            )}
-            <span className="px-1 text-stone-400">...</span>
-            <button
-              type="button"
-              onClick={() => setPage(totalPages)}
-              className={`size-7 rounded-lg font-bold text-xs ${
-                page === totalPages
-                  ? 'bg-[#1f7a55] text-white shadow-sm'
-                  : 'text-stone-600 hover:bg-stone-100'
-              }`}
-            >
-              {totalPages}
-            </button>
+            {(() => {
+              const items: (number | '...')[] = []
+              if (totalPages <= 7) {
+                for (let i = 1; i <= totalPages; i++) items.push(i)
+              } else {
+                items.push(1)
+                if (page > 3) items.push('...')
+                for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) items.push(i)
+                if (page < totalPages - 2) items.push('...')
+                items.push(totalPages)
+              }
+              return items.map((num, i) =>
+                num === '...' ? (
+                  <span key={`ellipsis-${i}`} className="px-1 text-stone-400">...</span>
+                ) : (
+                  <button
+                    key={num}
+                    type="button"
+                    onClick={() => setPage(num)}
+                    className={`size-7 rounded-lg font-bold text-xs ${
+                      page === num
+                        ? 'bg-[#1f7a55] text-white shadow-sm'
+                        : 'text-stone-600 hover:bg-stone-100'
+                    }`}
+                  >
+                    {num}
+                  </button>
+                ),
+              )
+            })()}
 
             <button
               type="button"
@@ -663,7 +668,7 @@ export function AdminOrdersPage() {
             Sync Status: Real-time
           </span>
         </div>
-        <p>Last full order sync: October 31, 2023 - 10:15 AM</p>
+        <p>Live database sync active</p>
       </div>
 
       {/* Quick Edit Status Modal */}
@@ -688,9 +693,9 @@ function QuickEditStatusModal({
   onClose: () => void
 }) {
   const [status, setStatus] = useState<OrderStatus>(order.status)
-  const [carrier, setCarrier] = useState(order.tracking?.carrier || 'BlueDart Logistics')
+  const [carrier, setCarrier] = useState(order.tracking?.carrier || '')
   const [trackingNumber, setTrackingNumber] = useState(
-    order.tracking?.trackingNumber || 'BD-99283-X1'
+    order.tracking?.trackingNumber || ''
   )
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -703,8 +708,8 @@ function QuickEditStatusModal({
       await updateStatus({
         id: order.id,
         status,
-        carrier,
-        trackingNumber,
+        carrier: carrier.trim() || undefined,
+        trackingNumber: trackingNumber.trim() || undefined,
       }).unwrap()
       toast.success(`Order ${order.orderNumber} updated`)
       onClose()
@@ -739,6 +744,7 @@ function QuickEditStatusModal({
           <label className="block text-xs font-bold text-stone-600 mb-1">Carrier</label>
           <input
             type="text"
+            placeholder="e.g. BlueDart / Delhivery / SpeedPost"
             value={carrier}
             onChange={(e) => setCarrier(e.target.value)}
             className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm"
@@ -749,6 +755,7 @@ function QuickEditStatusModal({
           <label className="block text-xs font-bold text-stone-600 mb-1">Tracking Number</label>
           <input
             type="text"
+            placeholder="e.g. BD-10928391"
             value={trackingNumber}
             onChange={(e) => setTrackingNumber(e.target.value)}
             className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm"

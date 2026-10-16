@@ -12,9 +12,11 @@ import {
 } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { toast } from 'sonner'
+import bosscoLogo from '../../assets/images/Bossco_Logo__2__page-0001-removebg-preview.webp'
 import { useAppDispatch } from '../../app/hooks'
 import { useGetDashboardQuery } from '../../features/admin/adminApi'
 import { signOut } from '../../features/auth/authSlice'
+import { useAuth } from '../../hooks/useAuth'
 import { navigate } from '../../utils/router'
 import { Dialog } from './Dialog'
 import { btn } from './styles'
@@ -25,16 +27,18 @@ type NavItem = { id: AdminSection; label: string; href: string; icon: LucideIcon
 
 function BrandMark({ tone = 'light' }: { tone?: 'light' | 'dark' }) {
   return (
-    <a href="#admin" className="flex items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">
-      <span className="grid size-9 place-items-center rounded-xl bg-[#22c55e] text-white shadow-sm">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z" />
-          <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
-        </svg>
-      </span>
-      <span className="flex flex-col leading-none">
-        <span className={`text-[17px] font-bold tracking-tight ${tone === 'light' ? 'text-white' : 'text-[#1c3321]'}`}>
-          NutriStock
+    <a href="#admin" className="flex items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 group">
+      <img
+        src={bosscoLogo}
+        alt="Bossco — House of Dry Fruits and Nuts"
+        className="size-11 rounded-xl bg-white/95 object-contain p-1 shadow-md transition-transform duration-300 group-hover:scale-105"
+      />
+      <span className="flex flex-col justify-center leading-none">
+        <span className={`text-[19px] font-black tracking-[.18em] ${tone === 'light' ? 'text-white' : 'text-[#1c3321]'}`}>
+          BOSSCO
+        </span>
+        <span className="mt-1 text-[9px] font-bold uppercase tracking-[.24em] text-[#d9b27c]">
+          Nuts • Naturals
         </span>
       </span>
     </a>
@@ -79,6 +83,7 @@ function NavLinks({ items, active, onNavigate }: { items: NavItem[]; active: Adm
 
 function SidebarBody({ items, active, onNavigate }: { items: NavItem[]; active: AdminSection; onNavigate?: () => void }) {
   const dispatch = useAppDispatch()
+  const { user } = useAuth()
   const [signingOut, setSigningOut] = useState(false)
 
   const handleSignOut = async () => {
@@ -87,6 +92,19 @@ function SidebarBody({ items, active, onNavigate }: { items: NavItem[]; active: 
     toast.success('Signed out')
     navigate('home')
   }
+
+  const displayName =
+    user?.displayName?.trim() ||
+    [user?.firstName, user?.lastName].filter(Boolean).join(' ') ||
+    user?.email ||
+    'Admin'
+  const roleLabel = user?.role === 'admin' ? 'Administrator' : 'Store Manager'
+  const initials = displayName
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase()
 
   return (
     <div className="flex h-full flex-col bg-[#24412a] px-4 py-5 text-white dark:bg-[#182b1d]">
@@ -106,16 +124,22 @@ function SidebarBody({ items, active, onNavigate }: { items: NavItem[]; active: 
       <div className="mt-auto pt-4 border-t border-white/10">
         <div className="flex items-center justify-between gap-3 rounded-2xl bg-white/5 p-2.5 ring-1 ring-white/10">
           <div className="flex items-center gap-3 min-w-0">
-            <img
-              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
-              alt="Robert Fox"
-              className="size-9 shrink-0 rounded-full object-cover ring-2 ring-emerald-500/40"
-            />
+            {user?.avatarUrl ? (
+              <img
+                src={user.avatarUrl}
+                alt={displayName}
+                className="size-9 shrink-0 rounded-full object-cover ring-2 ring-emerald-500/40"
+              />
+            ) : (
+              <span className="grid size-9 shrink-0 place-items-center rounded-full bg-emerald-600 text-xs font-bold text-white ring-2 ring-emerald-500/40">
+                {initials || 'AD'}
+              </span>
+            )}
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-white leading-tight">
-                Robert Fox
+                {displayName}
               </p>
-              <p className="truncate text-xs text-stone-300/70 leading-tight">Store Manager</p>
+              <p className="truncate text-xs text-stone-300/70 leading-tight">{roleLabel}</p>
             </div>
           </div>
           <div className="flex items-center gap-1">

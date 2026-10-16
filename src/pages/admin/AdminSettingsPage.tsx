@@ -22,31 +22,35 @@ import {
   useGetSettingsQuery,
   useSendTestEmailMutation,
   useUpdateSettingsMutation,
+  useUploadFaviconMutation,
+  useUploadStoreLogoMutation,
 } from '../../features/admin/adminApi'
 
 export function AdminSettingsPage() {
   const { data: serverSettings } = useGetSettingsQuery()
   const [updateSettings, { isLoading: isSaving }] = useUpdateSettingsMutation()
+  const [uploadStoreLogo, { isLoading: isUploadingLogo }] = useUploadStoreLogoMutation()
+  const [uploadFavicon, { isLoading: isUploadingFavicon }] = useUploadFaviconMutation()
   const [sendTestEmail, { isLoading: isTesting }] = useSendTestEmailMutation()
 
-  // Form State
-  const [storeName, setStoreName] = useState('NutriSelect Premium Nuts & Fruits')
-  const [contactEmail, setContactEmail] = useState('hello@nutriselect.com')
-  const [phoneNumber, setPhoneNumber] = useState('+1 (555) 000-1234')
+  // Form State — Bossco defaults; server DB values overwrite on load.
+  const [storeName, setStoreName] = useState('Bossco Naturals')
+  const [contactEmail, setContactEmail] = useState('hello@bossco.local')
+  const [phoneNumber, setPhoneNumber] = useState('+91 98765 43210')
   const [storeAddress, setStoreAddress] = useState(
-    '123 Organic Lane, Green Valley, CA 90210, United States'
+    'Bossco Naturals, Kochi, Kerala, India'
   )
 
-  const [taxId, setTaxId] = useState('GSTIN22AAAAA0000A1Z5')
+  const [taxId, setTaxId] = useState('GSTIN32AAAAA0000A1Z5')
   const [registrationDetails, setRegistrationDetails] = useState(
-    'Registered as NutriSelect Private Limited under California Trade Act 2021.'
+    'Registered as Bossco Naturals Private Limited.'
   )
-  const [currency, setCurrency] = useState('USD ($) - US Dollar')
-  const [timeZone, setTimeZone] = useState('(GMT-08:00) Pacific Time (US & Canada)')
+  const [currency, setCurrency] = useState('INR (₹) - Indian Rupee')
+  const [timeZone, setTimeZone] = useState('(GMT+05:30) India Standard Time')
 
-  const [standardDeliveryCharge, setStandardDeliveryCharge] = useState('5.00')
-  const [freeDeliveryThreshold, setFreeDeliveryThreshold] = useState('50.00')
-  const [regions, setRegions] = useState(['California', 'Oregon', 'Washington', 'Nevada'])
+  const [standardDeliveryCharge, setStandardDeliveryCharge] = useState('49.00')
+  const [freeDeliveryThreshold, setFreeDeliveryThreshold] = useState('999.00')
+  const [regions, setRegions] = useState(['Kerala', 'Tamil Nadu', 'Karnataka'])
   const [newRegion, setNewRegion] = useState('')
   const [showAddRegion, setShowAddRegion] = useState(false)
 
@@ -56,26 +60,26 @@ export function AdminSettingsPage() {
   const [productPriceType, setProductPriceType] = useState<'inclusive' | 'exclusive'>('inclusive')
 
   // Order Settings
-  const [minOrderVal, setMinOrderVal] = useState('20')
-  const [maxOrderVal, setMaxOrderVal] = useState('1000')
+  const [minOrderVal, setMinOrderVal] = useState('0')
+  const [maxOrderVal, setMaxOrderVal] = useState('100000')
   const [allowCod, setAllowCod] = useState(true)
   const [cancellationWindow, setCancellationWindow] = useState('Up to 30 minutes after order')
 
   // Payment Methods
   const [upiEnabled, setUpiEnabled] = useState(true)
   const [cardEnabled, setCardEnabled] = useState(true)
-  const [netBankingEnabled, setNetBankingEnabled] = useState(false)
+  const [netBankingEnabled, setNetBankingEnabled] = useState(true)
   const [codEnabled, setCodEnabled] = useState(true)
 
-  // Email & SMTP Configuration
-  const [smtpHost, setSmtpHost] = useState('localhost')
-  const [smtpPort, setSmtpPort] = useState('1025')
+  // Email & SMTP Configuration — Gmail SMTP via backend only.
+  const [smtpHost, setSmtpHost] = useState('smtp.gmail.com')
+  const [smtpPort, setSmtpPort] = useState('587')
   const [smtpUser, setSmtpUser] = useState('')
   const [smtpPassword, setSmtpPassword] = useState('')
-  const [smtpFrom, setSmtpFrom] = useState('NutriStock <no-reply@nutristock.local>')
+  const [smtpFrom, setSmtpFrom] = useState('Bossco Naturals <no-reply@bossco.local>')
   const [smtpSecure, setSmtpSecure] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
-  const [testEmailAddress, setTestEmailAddress] = useState('admin@nutristock.local')
+  const [testEmailAddress, setTestEmailAddress] = useState('')
 
   // Populate from server settings when loaded
   useEffect(() => {
@@ -115,11 +119,11 @@ export function AdminSettingsPage() {
       }
 
       if (serverSettings.mail) {
-        setSmtpHost(serverSettings.mail.host || 'localhost')
-        setSmtpPort(String(serverSettings.mail.port || 1025))
+        setSmtpHost(serverSettings.mail.host || 'smtp.gmail.com')
+        setSmtpPort(String(serverSettings.mail.port || 587))
         setSmtpUser(serverSettings.mail.user || '')
         setSmtpPassword(serverSettings.mail.password || '')
-        setSmtpFrom(serverSettings.mail.from || 'NutriStock <no-reply@nutristock.local>')
+        setSmtpFrom(serverSettings.mail.from || 'Bossco Naturals <no-reply@bossco.local>')
         setSmtpSecure(Boolean(serverSettings.mail.secure))
       }
     }
@@ -166,7 +170,7 @@ export function AdminSettingsPage() {
         },
         mail: {
           host: smtpHost,
-          port: parseInt(smtpPort, 10) || 1025,
+          port: parseInt(smtpPort, 10) || 587,
           user: smtpUser,
           password: smtpPassword,
           from: smtpFrom,
@@ -259,30 +263,78 @@ export function AdminSettingsPage() {
                 />
               </div>
 
-              {/* Logo & Favicon Upload Dropzones */}
+              {/* Logo & Favicon Uploads — stored via backend /uploads, URLs in DB */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block font-semibold text-stone-700 mb-1">Store Logo</label>
-                  <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-stone-200 bg-stone-50/50 p-6 text-center hover:bg-stone-50 transition-colors cursor-pointer">
-                    <span className="grid size-9 place-items-center rounded-xl bg-emerald-50 text-emerald-600 mb-2">
-                      <ImageIcon size={18} />
-                    </span>
+                  <label className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-stone-200 bg-stone-50/50 p-6 text-center hover:bg-stone-50 transition-colors cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={isUploadingLogo}
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0]
+                        if (!file) return
+                        const formData = new FormData()
+                        formData.append('image', file)
+                        try {
+                          await uploadStoreLogo(formData).unwrap()
+                          toast.success('Store logo uploaded')
+                        } catch {
+                          toast.error('Could not upload logo')
+                        } finally {
+                          e.target.value = ''
+                        }
+                      }}
+                    />
+                    {serverSettings?.storeLogo ? (
+                      <img src={serverSettings.storeLogo} alt="Store logo" className="mb-2 h-12 object-contain" />
+                    ) : (
+                      <span className="grid size-9 place-items-center rounded-xl bg-emerald-50 text-emerald-600 mb-2">
+                        <ImageIcon size={18} />
+                      </span>
+                    )}
                     <p className="font-semibold text-stone-800 text-[11px]">
-                      Click to upload or drag logo
+                      {isUploadingLogo ? 'Uploading...' : 'Click to upload or drag logo'}
                     </p>
                     <p className="text-[10px] text-stone-400 mt-0.5">PNG, JPG up to 2MB</p>
-                  </div>
+                  </label>
                 </div>
 
                 <div>
                   <label className="block font-semibold text-stone-700 mb-1">Favicon</label>
-                  <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-stone-200 bg-stone-50/50 p-6 text-center hover:bg-stone-50 transition-colors cursor-pointer">
-                    <span className="grid size-9 place-items-center rounded-xl bg-emerald-50 text-emerald-600 mb-2">
-                      <Upload size={18} />
-                    </span>
-                    <p className="font-semibold text-stone-800 text-[11px]">Upload Icon</p>
+                  <label className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-stone-200 bg-stone-50/50 p-6 text-center hover:bg-stone-50 transition-colors cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={isUploadingFavicon}
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0]
+                        if (!file) return
+                        const formData = new FormData()
+                        formData.append('image', file)
+                        try {
+                          await uploadFavicon(formData).unwrap()
+                          toast.success('Favicon uploaded')
+                        } catch {
+                          toast.error('Could not upload favicon')
+                        } finally {
+                          e.target.value = ''
+                        }
+                      }}
+                    />
+                    {serverSettings?.favicon ? (
+                      <img src={serverSettings.favicon} alt="Favicon" className="mb-2 size-8 object-contain" />
+                    ) : (
+                      <span className="grid size-9 place-items-center rounded-xl bg-emerald-50 text-emerald-600 mb-2">
+                        <Upload size={18} />
+                      </span>
+                    )}
+                    <p className="font-semibold text-stone-800 text-[11px]">{isUploadingFavicon ? 'Uploading...' : 'Upload Icon'}</p>
                     <p className="text-[10px] text-stone-400 mt-0.5">32×32px recommended</p>
-                  </div>
+                  </label>
                 </div>
               </div>
 
@@ -514,14 +566,17 @@ export function AdminSettingsPage() {
             <div className="space-y-4 text-xs">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="sm:col-span-2">
-                  <label className="block font-semibold text-stone-700 mb-1">SMTP Host</label>
+                  <label className="block font-semibold text-stone-700 mb-1">SMTP Host (Gmail)</label>
                   <input
                     type="text"
                     value={smtpHost}
                     onChange={(e) => setSmtpHost(e.target.value)}
-                    placeholder="localhost or smtp.gmail.com"
+                    placeholder="smtp.gmail.com"
                     className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-xs text-stone-800 focus:outline-none focus:ring-2 focus:ring-[#1f7a55]"
                   />
+                  <p className="mt-1 text-[11px] text-stone-400">
+                    Gmail only — use an App Password, set in the backend .env or here (stored in DB).
+                  </p>
                 </div>
 
                 <div>
@@ -530,7 +585,7 @@ export function AdminSettingsPage() {
                     type="number"
                     value={smtpPort}
                     onChange={(e) => setSmtpPort(e.target.value)}
-                    placeholder="1025, 587, 465"
+                    placeholder="587"
                     className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-xs text-stone-800 focus:outline-none focus:ring-2 focus:ring-[#1f7a55]"
                   />
                 </div>
@@ -539,13 +594,13 @@ export function AdminSettingsPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block font-semibold text-stone-700 mb-1">
-                    SMTP User / Email
+                    SMTP User / Gmail address
                   </label>
                   <input
                     type="text"
                     value={smtpUser}
                     onChange={(e) => setSmtpUser(e.target.value)}
-                    placeholder="e.g. admin@nutristock.local"
+                    placeholder="e.g. bossco.store@gmail.com"
                     className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-xs text-stone-800 focus:outline-none focus:ring-2 focus:ring-[#1f7a55]"
                   />
                 </div>
@@ -579,7 +634,7 @@ export function AdminSettingsPage() {
                   type="text"
                   value={smtpFrom}
                   onChange={(e) => setSmtpFrom(e.target.value)}
-                  placeholder="NutriStock <no-reply@nutristock.local>"
+                  placeholder="Bossco Naturals <no-reply@bossco.local>"
                   className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-xs text-stone-800 focus:outline-none focus:ring-2 focus:ring-[#1f7a55]"
                 />
               </div>

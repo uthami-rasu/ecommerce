@@ -17,31 +17,59 @@ import {
   UserPlus,
   Users,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Dialog } from '../../components/admin/Dialog'
 import { navigate } from '../../utils/router'
 import { toast } from 'sonner'
 import { useGetAdminCustomersQuery, useUpdateCustomerStatusMutation } from '../../features/admin/adminApi'
 
+const CUSTOMERS_LIMIT = 10
+
 export function AdminCustomersPage() {
+  const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [dateRange, setDateRange] = useState('')
   const [page, setPage] = useState(1)
   const [addCustomerModal, setAddCustomerModal] = useState(false)
 
+  // Debounce search and reset to first page on change.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setSearch(searchInput.trim())
+      setPage(1)
+    }, 300)
+    return () => clearTimeout(t)
+  }, [searchInput])
+
   const { data: customersRes, isLoading, refetch } = useGetAdminCustomersQuery({
-    search: search.trim() || undefined,
+    search: search || undefined,
     status: statusFilter === 'all' ? undefined : statusFilter,
     page,
-    limit: 10,
+    limit: CUSTOMERS_LIMIT,
   })
 
   const [updateStatus] = useUpdateCustomerStatusMutation()
 
   const customers = customersRes?.data ?? []
   const total = customersRes?.meta.total ?? 0
-  const totalPages = customersRes?.meta.totalPages ?? 1
+  const limit = customersRes?.meta.limit ?? CUSTOMERS_LIMIT
+  const totalPages = Math.max(1, customersRes?.meta.totalPages ?? 1)
+
+  // Clamp page when filters shrink totalPages.
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages)
+  }, [page, totalPages])
+
+  const pageNumbers = useMemo<(number | '...')[]>(() => {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1)
+    const windowed: (number | '...')[] = [1]
+    if (page > 3) windowed.push('...')
+    for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) windowed.push(i)
+    if (page < totalPages - 2) windowed.push('...')
+    windowed.push(totalPages)
+    return windowed
+  }, [page, totalPages])
 
   const exportCustomers = () => {
     if (!customers.length) {
@@ -206,8 +234,8 @@ export function AdminCustomersPage() {
             <input
               type="text"
               placeholder="Name, phone or email..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               className="w-full rounded-xl border border-stone-200 bg-stone-50/50 py-2.5 pl-10 pr-3 text-xs text-stone-800 placeholder:text-stone-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1f7a55]"
             />
           </div>
@@ -231,7 +259,10 @@ export function AdminCustomersPage() {
           <div className="relative min-w-[130px]">
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => {
+                setStatusFilter(e.target.value)
+                setPage(1)
+              }}
               className="w-full appearance-none rounded-xl border border-stone-200 bg-stone-50/50 py-2.5 px-3 text-xs text-stone-800 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1f7a55]"
             >
               <option value="all">All Status</option>
@@ -380,8 +411,8 @@ export function AdminCustomersPage() {
         {/* Pagination Bar */}
         <div className="flex flex-wrap items-center justify-between gap-4 border-t border-stone-100 bg-white px-6 py-4 text-xs text-stone-500">
           <p>
-            Showing <strong className="text-stone-800">{customers.length ? (page - 1) * 10 + 1 : 0}</strong> to{' '}
-            <strong className="text-stone-800">{Math.min(page * 10, total)}</strong> of{' '}
+            Showing <strong className="text-stone-800">{total === 0 ? 0 : (page - 1) * limit + 1}</strong> to{' '}
+            <strong className="text-stone-800">{Math.min(page * limit, total)}</strong> of{' '}
             <strong className="text-stone-800">{total}</strong> customers
           </p>
 
@@ -395,20 +426,24 @@ export function AdminCustomersPage() {
               <ChevronLeft size={13} />
             </button>
 
-            {Array.from({ length: totalPages }, (_, i) => i + 1).slice(0, 5).map((num) => (
-              <button
-                key={num}
-                type="button"
-                onClick={() => setPage(num)}
-                className={`size-7 rounded-lg font-bold text-xs ${
-                  page === num
-                    ? 'bg-[#1f7a55] text-white shadow-sm'
-                    : 'text-stone-600 hover:bg-stone-100'
-                }`}
-              >
-                {num}
-              </button>
-            ))}
+            {pageNumbers.map((num, i) =>
+              num === '...' ? (
+                <span key={`ellipsis-${i}`} className="px-1 text-stone-400">...</span>
+              ) : (
+                <button
+                  key={num}
+                  type="button"
+                  onClick={() => setPage(num)}
+                  className={`size-7 rounded-lg font-bold text-xs ${
+                    page === num
+                      ? 'bg-[#1f7a55] text-white shadow-sm'
+                      : 'text-stone-600 hover:bg-stone-100'
+                  }`}
+                >
+                  {num}
+                </button>
+              ),
+            )}
 
             <button
               type="button"

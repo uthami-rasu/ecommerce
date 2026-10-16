@@ -16,6 +16,8 @@ import type {
   TrackingInput,
   UpdateCategoryInput,
   UpdateOrderStatusInput,
+  UpdateProductInput,
+  AdminProductDetail,
 } from '../types/api'
 
 export const adminRepository = {
@@ -26,8 +28,10 @@ export const adminRepository = {
   updateTracking: (id: string, input: TrackingInput) => http.patch<AdminOrderDetail>(`/admin/orders/${id}/tracking`, input),
   addEvent: (id: string, input: OrderEventInput) => http.post<AdminOrderDetail>(`/admin/orders/${id}/events`, input),
   products: (query: AdminProductQuery = {}) => http.get<Paginated<AdminProductListItem>>('/admin/products', query),
+  product: (id: string) => http.get<AdminProductDetail>(`/admin/products/${id}`),
   deleteProduct: (id: string) => http.delete<void>(`/admin/products/${id}`),
   createProduct: (input: CreateProductInput) => http.post<any>('/admin/products', input),
+  updateProduct: (id: string, input: UpdateProductInput) => http.patch<AdminProductDetail>(`/admin/products/${id}`, input),
   uploadProductImage: (id: string, formData: FormData) => http.post<any>(`/admin/products/${id}/images`, formData),
   categories: () => http.get<{ data: CategoryRef[] }>('/categories'),
   adminCategories: (query: AdminCategoryQuery = {}) => http.get<Paginated<AdminCategoryListItem>>('/admin/categories', query),
@@ -38,6 +42,8 @@ export const adminRepository = {
   uploadCategoryImage: (id: string, formData: FormData) => http.post<AdminCategoryListItem>(`/admin/categories/${id}/image`, formData),
   settings: () => http.get<any>('/admin/settings'),
   updateSettings: (input: any) => http.patch<any>('/admin/settings', input),
+  uploadStoreLogo: (formData: FormData) => http.post<any>('/admin/settings/logo', formData),
+  uploadFavicon: (formData: FormData) => http.post<any>('/admin/settings/favicon', formData),
   testEmail: (to: string) => http.post<{ success: boolean; message: string }>('/admin/settings/test-email', { to }),
   customers: (query: { search?: string; status?: string; page?: number; limit?: number } = {}) =>
     http.get<{ data: any[]; meta: { total: number; page: number; limit: number; totalPages: number } }>('/admin/customers', query),

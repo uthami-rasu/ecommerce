@@ -5,7 +5,9 @@ import { btn } from '../../components/admin/styles'
 import { Card, EmptyState } from '../../components/admin/ui'
 import '../../styles/admin.css'
 import { AdminAddCategoryPage } from './AdminAddCategoryPage'
+import { AdminEditCategoryPage } from './AdminEditCategoryPage'
 import { AdminAddProductPage } from './AdminAddProductPage'
+import { AdminEditProductPage } from './AdminEditProductPage'
 import { AdminCategoriesPage } from './AdminCategoriesPage'
 import { AdminCustomerDetailPage } from './AdminCustomerDetailPage'
 import { AdminCustomersPage } from './AdminCustomersPage'
@@ -21,8 +23,10 @@ function resolve(segments: string[]): { section: AdminSection; title: string; pa
   if (head === 'orders' && !second) return { section: 'orders', title: 'Orders', page: <AdminOrdersPage /> }
   if (head === 'orders' && second && !rest.length) return { section: 'orders', title: 'Order', page: <AdminOrderPage key={second} id={second} /> }
   if (head === 'products' && second === 'new') return { section: 'products', title: 'Add New Product', page: <AdminAddProductPage /> }
+  if (head === 'products' && second && rest[0] === 'edit') return { section: 'products', title: 'Edit Product', page: <AdminEditProductPage key={second} id={second} /> }
   if (head === 'products') return { section: 'products', title: 'Products', page: <AdminProductsPage /> }
   if (head === 'categories' && second === 'new') return { section: 'categories', title: 'Add Category', page: <AdminAddCategoryPage /> }
+  if (head === 'categories' && second && rest[0] === 'edit') return { section: 'categories', title: 'Edit Category', page: <AdminEditCategoryPage key={second} id={second} /> }
   if (head === 'categories') return { section: 'categories', title: 'Categories', page: <AdminCategoriesPage /> }
   if (head === 'customers' && second && !rest.length) return { section: 'customers', title: 'Customer Details', page: <AdminCustomerDetailPage key={second} id={second} /> }
   if (head === 'customers') return { section: 'customers', title: 'Customers', page: <AdminCustomersPage /> }
@@ -46,7 +50,7 @@ export function AdminApp({ segments }: { segments: string[] }) {
 
   useEffect(() => {
     const previous = document.title
-    document.title = `${title} · NutriStock Admin`
+    document.title = `${title} · Bossco Admin`
     return () => {
       document.title = previous
     }

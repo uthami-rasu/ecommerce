@@ -4,6 +4,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Edit2,
   MoreVertical,
   Plus,
   Search,
@@ -46,6 +47,74 @@ const FALLBACK_CATEGORY_IMAGES: Record<string, string> = {
   'mixed-nuts': nutMarketImg,
   'dried-fruits': dryFruitBowlImg,
   'other-nuts': cashewImg,
+}
+
+// ── Pagination (page-aware, mirrors AdminProductsPage) ─────────────────────────
+
+function CategoryPagination({ page, totalPages, total, limit, onChange }: {
+  page: number; totalPages: number; total: number; limit: number; onChange: (p: number) => void
+}) {
+  const safeTotalPages = Math.max(1, totalPages)
+  const safePage = Math.min(Math.max(1, page), safeTotalPages)
+  const from = total === 0 ? 0 : (safePage - 1) * limit + 1
+  const to = Math.min(safePage * limit, total)
+
+  const pages: (number | '...')[] = []
+  if (safeTotalPages <= 7) {
+    for (let i = 1; i <= safeTotalPages; i++) pages.push(i)
+  } else {
+    pages.push(1)
+    if (safePage > 3) pages.push('...')
+    for (let i = Math.max(2, safePage - 1); i <= Math.min(safeTotalPages - 1, safePage + 1); i++) pages.push(i)
+    if (safePage < safeTotalPages - 2) pages.push('...')
+    pages.push(safeTotalPages)
+  }
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-stone-100 p-4 text-xs dark:border-stone-800">
+      <p className="text-stone-500 dark:text-stone-400">
+        Showing <span className="font-semibold text-stone-800 dark:text-stone-200">{from}</span> to{' '}
+        <span className="font-semibold text-stone-800 dark:text-stone-200">{to}</span> of{' '}
+        <span className="font-semibold text-stone-800 dark:text-stone-200">{total}</span> categories
+      </p>
+      <div className="flex items-center gap-1.5">
+        <button
+          type="button"
+          disabled={safePage <= 1}
+          onClick={() => onChange(safePage - 1)}
+          className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-stone-600 hover:bg-stone-100 disabled:opacity-40 dark:text-stone-400 dark:hover:bg-stone-800"
+        >
+          <ChevronLeft size={14} /> Previous
+        </button>
+        {pages.map((p, i) =>
+          p === '...' ? (
+            <span key={`ellipsis-${i}`} className="px-1 text-stone-400">...</span>
+          ) : (
+            <button
+              key={p}
+              type="button"
+              onClick={() => onChange(p as number)}
+              className={`grid size-7 place-items-center rounded-lg text-xs font-semibold ${
+                p === safePage
+                  ? 'bg-[#24412a] text-white shadow-sm'
+                  : 'text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800'
+              }`}
+            >
+              {p}
+            </button>
+          ),
+        )}
+        <button
+          type="button"
+          disabled={safePage >= safeTotalPages}
+          onClick={() => onChange(safePage + 1)}
+          className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-stone-600 hover:bg-stone-100 disabled:opacity-40 dark:text-stone-400 dark:hover:bg-stone-800"
+        >
+          Next <ChevronRight size={14} />
+        </button>
+      </div>
+    </div>
+  )
 }
 
 export function AdminCategoriesPage() {
@@ -442,15 +511,24 @@ export function AdminCategoriesPage() {
                         {createdStr}
                       </td>
 
-                      {/* Actions 3-dots */}
+                      {/* Actions */}
                       <td className="px-4 py-3.5 relative">
-                        <button
-                          type="button"
-                          onClick={() => setOpenMenuId(openMenuId === cat.id ? null : cat.id)}
-                          className="grid size-7 place-items-center rounded-lg text-stone-400 hover:bg-stone-100 hover:text-stone-700 dark:hover:bg-stone-800"
-                        >
-                          <MoreVertical size={16} />
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <a
+                            href={`#admin/categories/${cat.id}/edit`}
+                            className="grid size-7 place-items-center rounded-lg text-stone-400 hover:bg-stone-100 hover:text-[#1f7a55] dark:hover:bg-stone-800"
+                            title="Edit Category"
+                          >
+                            <Edit2 size={14} />
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => setOpenMenuId(openMenuId === cat.id ? null : cat.id)}
+                            className="grid size-7 place-items-center rounded-lg text-stone-400 hover:bg-stone-100 hover:text-stone-700 dark:hover:bg-stone-800"
+                          >
+                            <MoreVertical size={16} />
+                          </button>
+                        </div>
 
                         {/* Menu Dropdown */}
                         {openMenuId === cat.id && (
@@ -458,6 +536,13 @@ export function AdminCategoriesPage() {
                             onMouseLeave={() => setOpenMenuId(null)}
                             className="absolute right-4 top-10 z-30 w-36 rounded-xl bg-white p-1.5 shadow-lg ring-1 ring-stone-200 dark:bg-stone-900 dark:ring-stone-800"
                           >
+                            <a
+                              href={`#admin/categories/${cat.id}/edit`}
+                              onClick={() => setOpenMenuId(null)}
+                              className="block w-full text-left rounded-lg px-2.5 py-1.5 text-xs font-medium text-stone-700 hover:bg-stone-50 dark:text-stone-200 dark:hover:bg-stone-800"
+                            >
+                              Edit Category
+                            </a>
                             <a
                               href={`#shop/${cat.slug}`}
                               target="_blank"
@@ -489,61 +574,13 @@ export function AdminCategoriesPage() {
 
         {/* Pagination Footer */}
         {meta && (
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-stone-100 p-4 text-xs dark:border-stone-800">
-            <p className="text-stone-500 dark:text-stone-400">
-              Showing <span className="font-semibold text-stone-800 dark:text-stone-200">1</span> to{' '}
-              <span className="font-semibold text-stone-800 dark:text-stone-200">
-                {Math.min(categories.length, 10)}
-              </span>{' '}
-              of{' '}
-              <span className="font-semibold text-stone-800 dark:text-stone-200">
-                {meta.total || categories.length}
-              </span>{' '}
-              products
-            </p>
-
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                disabled={query.page === 1}
-                onClick={() => setQuery((q) => ({ ...q, page: Math.max(1, (q.page || 1) - 1) }))}
-                className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-stone-600 hover:bg-stone-100 disabled:opacity-40 dark:text-stone-400 dark:hover:bg-stone-800"
-              >
-                <ChevronLeft size={14} /> Previous
-              </button>
-              <button
-                type="button"
-                className="grid size-7 place-items-center rounded-lg bg-[#24412a] text-xs font-bold text-white shadow-sm"
-              >
-                1
-              </button>
-              <button
-                type="button"
-                className="grid size-7 place-items-center rounded-lg text-xs font-semibold text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800"
-              >
-                2
-              </button>
-              <button
-                type="button"
-                className="grid size-7 place-items-center rounded-lg text-xs font-semibold text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800"
-              >
-                3
-              </button>
-              <span className="px-1 text-stone-400">...</span>
-              <button
-                type="button"
-                className="grid size-7 place-items-center rounded-lg text-xs font-semibold text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800"
-              >
-                12
-              </button>
-              <button
-                type="button"
-                className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-stone-600 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800"
-              >
-                Next <ChevronRight size={14} />
-              </button>
-            </div>
-          </div>
+          <CategoryPagination
+            page={meta.page ?? query.page ?? 1}
+            totalPages={meta.totalPages ?? 1}
+            total={meta.total ?? 0}
+            limit={meta.limit ?? query.limit ?? 10}
+            onChange={(p) => setQuery((q) => ({ ...q, page: p }))}
+          />
         )}
       </div>
 
@@ -588,6 +625,7 @@ export function AdminCategoriesPage() {
           </div>
         </div>
       )}
+
     </div>
   )
 }

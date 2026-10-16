@@ -5,6 +5,7 @@ import {
   CreditCard,
   Download,
   ExternalLink,
+  Package,
   Printer,
   RotateCw,
   Truck,
@@ -66,9 +67,9 @@ export function AdminOrderPage({ id }: { id: string }) {
 
   const customerName = order.customer
     ? fullName(order.customer)
-    : fullName(order.shippingAddress) || 'Alice Thompson'
-  const customerEmail = order.customer?.email || order.contactEmail || 'alice.t@email.com'
-  const customerPhone = order.customer?.phone || order.shippingAddress.phone || '+1 (555) 0123-456'
+    : fullName(order.shippingAddress) || order.contactEmail || 'Guest Customer'
+  const customerEmail = order.customer?.email || order.contactEmail || '—'
+  const customerPhone = order.customer?.phone || order.shippingAddress.phone || 'Not provided'
 
   const formattedAddress = [
     order.shippingAddress.line1,
@@ -219,26 +220,31 @@ export function AdminOrderPage({ id }: { id: string }) {
                     <tr key={item.id} className="hover:bg-stone-50/50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <img
-                            src={
-                              item.imageUrl ||
-                              'https://images.unsplash.com/photo-1508746829417-e6f548d8d6ed?w=100&auto=format&fit=crop&q=80'
-                            }
-                            alt={item.productName}
-                            className="size-12 rounded-xl object-cover ring-1 ring-stone-200"
-                          />
+                          {item.imageUrl ? (
+                            <img
+                              src={item.imageUrl}
+                              alt={item.productName}
+                              className="size-12 rounded-xl object-cover ring-1 ring-stone-200"
+                            />
+                          ) : (
+                            <div className="grid size-12 place-items-center rounded-xl bg-stone-100 text-stone-500 ring-1 ring-stone-200">
+                              <Package size={20} />
+                            </div>
+                          )}
                           <div>
                             <p className="font-bold text-stone-900 text-xs sm:text-sm">
                               {item.productName}
                             </p>
-                            <p className="text-[11px] text-stone-500">
-                              {item.variantLabel || 'Pack: 500g'}
-                            </p>
+                            {item.variantLabel && (
+                              <p className="text-[11px] text-stone-500">
+                                Pack: {item.variantLabel}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </td>
                       <td className="px-4 py-4 text-xs font-mono font-medium text-stone-600">
-                        {item.sku || 'NUT-ALM-R01'}
+                        {item.sku || '—'}
                       </td>
                       <td className="px-4 py-4 text-center font-semibold text-stone-800">
                         x {item.quantity}
@@ -359,7 +365,7 @@ export function AdminOrderPage({ id }: { id: string }) {
                   Delivery Address
                 </p>
                 <p className="mt-0.5 font-medium leading-relaxed text-stone-700">
-                  {formattedAddress || '4728 Oak Avenue, Suite 210, Silver Spring, MD 20910, United States'}
+                  {formattedAddress || 'No delivery address provided'}
                 </p>
               </div>
             </div>
@@ -380,19 +386,21 @@ export function AdminOrderPage({ id }: { id: string }) {
                   Method
                 </p>
                 <div className="mt-1 flex items-center gap-2">
-                  <span className="font-bold text-stone-900">Credit Card (Visa)</span>
-                  <span className="rounded bg-blue-50 px-1.5 py-0.5 font-mono text-[10px] font-bold text-blue-700 ring-1 ring-blue-200">
-                    VISA
+                  <span className="font-bold text-stone-900 capitalize">
+                    {order.shippingMethod ? `${order.shippingMethod} checkout` : 'Online payment'}
+                  </span>
+                  <span className="rounded bg-emerald-50 px-1.5 py-0.5 font-mono text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-200 uppercase">
+                    {order.paymentStatus === 'succeeded' ? 'PAID' : (order.paymentStatus || 'PENDING')}
                   </span>
                 </div>
               </div>
 
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
-                  Transaction ID
+                  Order Reference
                 </p>
                 <p className="mt-0.5 font-mono text-xs text-stone-700">
-                  TXN_9827110292
+                  {order.orderNumber}
                 </p>
               </div>
 
@@ -400,9 +408,19 @@ export function AdminOrderPage({ id }: { id: string }) {
                 <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
                   Status
                 </p>
-                <p className="mt-0.5 flex items-center gap-1.5 font-semibold text-emerald-600">
-                  <span className="size-2 rounded-full bg-emerald-500" />
-                  Successful
+                <p className={`mt-0.5 flex items-center gap-1.5 font-semibold ${
+                  order.paymentStatus === 'succeeded'
+                    ? 'text-emerald-600'
+                    : 'text-amber-600'
+                }`}>
+                  <span className={`size-2 rounded-full ${
+                    order.paymentStatus === 'succeeded'
+                      ? 'bg-emerald-500'
+                      : 'bg-amber-500'
+                  }`} />
+                  {order.paymentStatus === 'succeeded'
+                    ? 'Successful'
+                    : (order.paymentStatus ?? 'Pending Payment')}
                 </p>
               </div>
             </div>
@@ -432,7 +450,7 @@ export function AdminOrderPage({ id }: { id: string }) {
                   Partner
                 </p>
                 <p className="mt-0.5 font-bold text-stone-900">
-                  {order.tracking?.carrier || 'BlueDart Logistics'}
+                  {order.tracking?.carrier || 'Not assigned yet'}
                 </p>
               </div>
 
@@ -441,7 +459,7 @@ export function AdminOrderPage({ id }: { id: string }) {
                   Tracking ID
                 </p>
                 <div className="mt-0.5 flex items-center gap-1.5 font-mono font-medium text-[#1f7a55]">
-                  <span>{order.tracking?.trackingNumber || 'BD-99283-X1'}</span>
+                  <span>{order.tracking?.trackingNumber || 'Not assigned yet'}</span>
                   {order.tracking?.trackingUrl ? (
                     <a
                       href={order.tracking.trackingUrl}
@@ -451,9 +469,7 @@ export function AdminOrderPage({ id }: { id: string }) {
                     >
                       <ExternalLink size={13} />
                     </a>
-                  ) : (
-                    <ExternalLink size={13} className="text-stone-400" />
-                  )}
+                  ) : null}
                 </div>
               </div>
 
@@ -464,7 +480,7 @@ export function AdminOrderPage({ id }: { id: string }) {
                 <p className="mt-0.5 font-medium text-stone-800">
                   {order.tracking?.estimatedDeliveryAt
                     ? formatDate(order.tracking.estimatedDeliveryAt)
-                    : 'October 28, 2023'}
+                    : 'Pending dispatch'}
                 </p>
               </div>
             </div>
@@ -573,9 +589,9 @@ function AdminStatusUpdateDialog({
   onClose: () => void
 }) {
   const [status, setStatus] = useState<OrderStatus>(order.status)
-  const [carrier, setCarrier] = useState(order.tracking?.carrier || 'BlueDart Logistics')
+  const [carrier, setCarrier] = useState(order.tracking?.carrier || '')
   const [trackingNumber, setTrackingNumber] = useState(
-    order.tracking?.trackingNumber || 'BD-99283-X1'
+    order.tracking?.trackingNumber || ''
   )
   const [trackingUrl, setTrackingUrl] = useState(order.tracking?.trackingUrl || '')
   const [estimatedDeliveryAt, setEstimatedDeliveryAt] = useState(

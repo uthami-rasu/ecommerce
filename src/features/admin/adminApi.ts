@@ -17,6 +17,8 @@ import type {
   TrackingInput,
   UpdateCategoryInput,
   UpdateOrderStatusInput,
+  UpdateProductInput,
+  AdminProductDetail,
 } from '../../types/api'
 
 const orderTags = (id: string) => [{ type: 'AdminOrder' as const, id }, 'AdminOrders' as const, 'Dashboard' as const]
@@ -50,6 +52,14 @@ export const adminApi = api.injectEndpoints({
     getAdminProducts: build.query<Paginated<AdminProductListItem>, AdminProductQuery>({
       queryFn: (query) => run(adminRepository.products(query)),
       providesTags: ['AdminProducts'],
+    }),
+    getAdminProduct: build.query<AdminProductDetail, string>({
+      queryFn: (id) => run(adminRepository.product(id)),
+      providesTags: (_result, _error, id) => [{ type: 'AdminProducts', id }],
+    }),
+    updateAdminProduct: build.mutation<AdminProductDetail, { id: string } & UpdateProductInput>({
+      queryFn: ({ id, ...input }) => run(adminRepository.updateProduct(id, input)),
+      invalidatesTags: (_result, _error, { id }) => [{ type: 'AdminProducts', id }, 'AdminProducts', 'Products', 'Dashboard'],
     }),
     deleteAdminProduct: build.mutation<void, string>({
       queryFn: (id) => run(adminRepository.deleteProduct(id)),
@@ -107,6 +117,14 @@ export const adminApi = api.injectEndpoints({
       queryFn: (input) => run(adminRepository.updateSettings(input)),
       invalidatesTags: ['Settings'],
     }),
+    uploadStoreLogo: build.mutation<any, FormData>({
+      queryFn: (formData) => run(adminRepository.uploadStoreLogo(formData)),
+      invalidatesTags: ['Settings'],
+    }),
+    uploadFavicon: build.mutation<any, FormData>({
+      queryFn: (formData) => run(adminRepository.uploadFavicon(formData)),
+      invalidatesTags: ['Settings'],
+    }),
     sendTestEmail: build.mutation<{ success: boolean; message: string }, string>({
       queryFn: (to) => run(adminRepository.testEmail(to)),
     }),
@@ -133,6 +151,8 @@ export const {
   useUpdateOrderTrackingMutation,
   useAddOrderEventMutation,
   useGetAdminProductsQuery,
+  useGetAdminProductQuery,
+  useUpdateAdminProductMutation,
   useDeleteAdminProductMutation,
   useGetAdminCategoriesQuery,
   useGetAdminCategoriesListQuery,
@@ -145,6 +165,8 @@ export const {
   useUploadProductImageMutation,
   useGetSettingsQuery,
   useUpdateSettingsMutation,
+  useUploadStoreLogoMutation,
+  useUploadFaviconMutation,
   useSendTestEmailMutation,
   useGetAdminCustomersQuery,
   useGetAdminCustomerQuery,
