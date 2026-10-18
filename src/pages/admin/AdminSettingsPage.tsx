@@ -2,14 +2,10 @@ import {
   Bell,
   Building,
   CreditCard,
-  Eye,
-  EyeOff,
   Globe,
   Image as ImageIcon,
-  Mail,
   Plus,
   Save,
-  Send,
   Store,
   Tag,
   Truck,
@@ -20,7 +16,6 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import {
   useGetSettingsQuery,
-  useSendTestEmailMutation,
   useUpdateSettingsMutation,
   useUploadFaviconMutation,
   useUploadStoreLogoMutation,
@@ -31,7 +26,6 @@ export function AdminSettingsPage() {
   const [updateSettings, { isLoading: isSaving }] = useUpdateSettingsMutation()
   const [uploadStoreLogo, { isLoading: isUploadingLogo }] = useUploadStoreLogoMutation()
   const [uploadFavicon, { isLoading: isUploadingFavicon }] = useUploadFaviconMutation()
-  const [sendTestEmail, { isLoading: isTesting }] = useSendTestEmailMutation()
 
   // Form State — Bossco defaults; server DB values overwrite on load.
   const [storeName, setStoreName] = useState('Bossco Naturals')
@@ -71,16 +65,6 @@ export function AdminSettingsPage() {
   const [netBankingEnabled, setNetBankingEnabled] = useState(true)
   const [codEnabled, setCodEnabled] = useState(true)
 
-  // Email & SMTP Configuration — Gmail SMTP via backend only.
-  const [smtpHost, setSmtpHost] = useState('smtp.gmail.com')
-  const [smtpPort, setSmtpPort] = useState('587')
-  const [smtpUser, setSmtpUser] = useState('')
-  const [smtpPassword, setSmtpPassword] = useState('')
-  const [smtpFrom, setSmtpFrom] = useState('Bossco Naturals <no-reply@bossco.local>')
-  const [smtpSecure, setSmtpSecure] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
-  const [testEmailAddress, setTestEmailAddress] = useState('')
-
   // Populate from server settings when loaded
   useEffect(() => {
     if (serverSettings) {
@@ -116,15 +100,6 @@ export function AdminSettingsPage() {
         setCardEnabled(serverSettings.paymentMethods.card)
         setNetBankingEnabled(serverSettings.paymentMethods.netBanking)
         setCodEnabled(serverSettings.paymentMethods.cod)
-      }
-
-      if (serverSettings.mail) {
-        setSmtpHost(serverSettings.mail.host || 'smtp.gmail.com')
-        setSmtpPort(String(serverSettings.mail.port || 587))
-        setSmtpUser(serverSettings.mail.user || '')
-        setSmtpPassword(serverSettings.mail.password || '')
-        setSmtpFrom(serverSettings.mail.from || 'Bossco Naturals <no-reply@bossco.local>')
-        setSmtpSecure(Boolean(serverSettings.mail.secure))
       }
     }
   }, [serverSettings])
@@ -168,32 +143,11 @@ export function AdminSettingsPage() {
           netBanking: netBankingEnabled,
           cod: codEnabled,
         },
-        mail: {
-          host: smtpHost,
-          port: parseInt(smtpPort, 10) || 587,
-          user: smtpUser,
-          password: smtpPassword,
-          from: smtpFrom,
-          secure: smtpSecure,
-        },
       }).unwrap()
 
-      toast.success('Store & Email settings saved successfully!')
+      toast.success('Store settings saved successfully!')
     } catch {
       toast.error('Could not save settings')
-    }
-  }
-
-  const handleSendTestEmail = async () => {
-    if (!testEmailAddress) {
-      toast.error('Please enter a recipient email')
-      return
-    }
-    try {
-      const res = await sendTestEmail(testEmailAddress).unwrap()
-      toast.success(res.message || 'Test email dispatched successfully!')
-    } catch {
-      toast.error('Failed to send test email. Check your SMTP configuration.')
     }
   }
 
@@ -539,150 +493,6 @@ export function AdminSettingsPage() {
                       <Plus size={12} /> Add Region
                     </button>
                   )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Email & Mailbox Configuration (SMTP) - User Explicit Requirement */}
-          <div className="rounded-2xl border border-stone-200/80 bg-white p-6 shadow-sm space-y-4">
-            <div className="border-b border-stone-100 pb-3 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Mail size={18} className="text-[#1f7a55]" />
-                <div>
-                  <h2 className="text-sm font-bold text-stone-900">
-                    Email & Password Configuration (SMTP)
-                  </h2>
-                  <p className="text-[11px] text-stone-400">
-                    Outgoing email settings for customer notifications, receipts & OTP verification.
-                  </p>
-                </div>
-              </div>
-              <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-200">
-                Connected
-              </span>
-            </div>
-
-            <div className="space-y-4 text-xs">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="sm:col-span-2">
-                  <label className="block font-semibold text-stone-700 mb-1">SMTP Host (Gmail)</label>
-                  <input
-                    type="text"
-                    value={smtpHost}
-                    onChange={(e) => setSmtpHost(e.target.value)}
-                    placeholder="smtp.gmail.com"
-                    className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-xs text-stone-800 focus:outline-none focus:ring-2 focus:ring-[#1f7a55]"
-                  />
-                  <p className="mt-1 text-[11px] text-stone-400">
-                    Gmail only — use an App Password, set in the backend .env or here (stored in DB).
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-stone-700 mb-1">SMTP Port</label>
-                  <input
-                    type="number"
-                    value={smtpPort}
-                    onChange={(e) => setSmtpPort(e.target.value)}
-                    placeholder="587"
-                    className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-xs text-stone-800 focus:outline-none focus:ring-2 focus:ring-[#1f7a55]"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block font-semibold text-stone-700 mb-1">
-                    SMTP User / Gmail address
-                  </label>
-                  <input
-                    type="text"
-                    value={smtpUser}
-                    onChange={(e) => setSmtpUser(e.target.value)}
-                    placeholder="e.g. bossco.store@gmail.com"
-                    className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-xs text-stone-800 focus:outline-none focus:ring-2 focus:ring-[#1f7a55]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-stone-700 mb-1">SMTP Password</label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      value={smtpPassword}
-                      onChange={(e) => setSmtpPassword(e.target.value)}
-                      placeholder="••••••••••••"
-                      className="w-full rounded-xl border border-stone-200 bg-white py-2.5 pl-3.5 pr-10 text-xs text-stone-800 focus:outline-none focus:ring-2 focus:ring-[#1f7a55]"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600"
-                    >
-                      {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-semibold text-stone-700 mb-1">
-                  Sender / From Address
-                </label>
-                <input
-                  type="text"
-                  value={smtpFrom}
-                  onChange={(e) => setSmtpFrom(e.target.value)}
-                  placeholder="Bossco Naturals <no-reply@bossco.local>"
-                  className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-xs text-stone-800 focus:outline-none focus:ring-2 focus:ring-[#1f7a55]"
-                />
-              </div>
-
-              <div className="flex items-center justify-between py-2 border-t border-stone-100">
-                <div>
-                  <p className="font-semibold text-stone-800">Secure Connection (SSL / TLS)</p>
-                  <p className="text-[11px] text-stone-400">
-                    Use port 465 for SSL or 587 with STARTTLS
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setSmtpSecure(!smtpSecure)}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    smtpSecure ? 'bg-[#1f7a55]' : 'bg-stone-300'
-                  }`}
-                >
-                  <span
-                    className={`pointer-events-none inline-block size-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                      smtpSecure ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
-              </div>
-
-              {/* Test Email Section */}
-              <div className="rounded-xl border border-stone-200/80 bg-stone-50/50 p-4 space-y-2">
-                <p className="font-bold text-stone-800">Send Test Email</p>
-                <p className="text-[11px] text-stone-500">
-                  Verify that your SMTP configuration can successfully deliver emails.
-                </p>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="email"
-                    value={testEmailAddress}
-                    onChange={(e) => setTestEmailAddress(e.target.value)}
-                    placeholder="Recipient email address"
-                    className="flex-1 rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[#1f7a55]"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleSendTestEmail}
-                    disabled={isTesting}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#24412a] px-4 py-2 text-xs font-bold text-white shadow-sm hover:bg-[#182b1d] transition-colors disabled:opacity-50"
-                  >
-                    <Send size={13} /> {isTesting ? 'Sending...' : 'Send Test'}
-                  </button>
                 </div>
               </div>
             </div>
