@@ -4,6 +4,7 @@ import { Header } from './components/layout/Header'
 import { RequireAdmin, RequireAuth } from './components/routing/RouteGuards'
 import { PageLoader } from './components/ui/PageLoader'
 import { ScrollProgress } from './components/ui/ScrollProgress'
+import { useKeepAlive } from './hooks/useKeepAlive'
 import { useLenis } from './hooks/useLenis'
 import { useReveal } from './hooks/useReveal'
 import { useRoute } from './hooks/useRoute'
@@ -83,6 +84,7 @@ function resolve(route: Route): Resolved {
 
 function App() {
   const route = useRoute()
+  useKeepAlive()
   useLenis()
   useTheme()
   useReveal()
