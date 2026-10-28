@@ -1,17 +1,25 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { AlertOctagon, Building2, CreditCard, Lock, RotateCcw, ShieldCheck, Smartphone, Wallet, XCircle } from 'lucide-react'
+import {
+  Building2,
+  Check,
+  CreditCard,
+  Lock,
+  RotateCcw,
+  ShieldCheck,
+  Smartphone,
+  Sparkles,
+  Truck,
+  Wallet,
+  XCircle,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { useAppDispatch } from '../../app/hooks'
 import { CardPaymentForm } from '../../components/checkout/CardPaymentForm'
 import { defaultExpiry, TEST_CARD_NUMBER, UPI_PATTERN, validateCard, type CardDraft, type CardErrors } from '../../components/checkout/cardUtils'
 import { CheckoutShell } from '../../components/checkout/CheckoutShell'
-import { Panel } from '../../components/checkout/Panel'
 import { PaymentProcessing } from '../../components/checkout/PaymentProcessing'
-import { PriceRows } from '../../components/checkout/PriceRows'
 import { Skeleton } from '../../components/checkout/Skeleton'
-import { SummaryLine } from '../../components/checkout/SummaryLine'
 import { UpiPaymentForm } from '../../components/checkout/UpiPaymentForm'
-import bosscoLogo from '../../assets/images/Bossco_Logo__2__page-0001-removebg-preview.webp'
 import { OrderNotFound } from '../../components/orders/OrderNotFound'
 import { isNotFound, isPayable } from '../../components/orders/orderHelpers'
 import { ordersApi, useGetOrderQuery, useGetPaymentGatewayQuery } from '../../features/orders/ordersApi'
@@ -32,36 +40,42 @@ export function PaymentPage({ orderNumber }: { orderNumber: string }) {
   const gatewayQuery = useGetPaymentGatewayQuery()
   const finished = useRef(false)
 
-  // Already paid / cancelled → the order page is the right place.
+  // Already paid / cancelled → redirect to the order page.
   useEffect(() => {
-    if (order && !finished.current && !isPayable(order.status)) navigate(`orders/${order.orderNumber}`, { replace: true })
+    if (order && !finished.current && !isPayable(order.status)) {
+      navigate(`orders/${order.orderNumber}`, { replace: true })
+    }
   }, [order])
 
   let content
-  if (isLoading || gatewayQuery.isLoading) content = <PaymentSkeleton />
-  else if (!gatewayQuery.data) {
+  if (isLoading || gatewayQuery.isLoading) {
+    content = <PaymentSkeleton />
+  } else if (!gatewayQuery.data) {
     content = <OrderNotFound orderNumber={orderNumber} error={errorMessage(gatewayQuery.error)} onRetry={gatewayQuery.refetch} />
   } else if (!order) {
     content = isNotFound(error) || !orderNumber
       ? <OrderNotFound orderNumber={orderNumber} />
       : <OrderNotFound orderNumber={orderNumber} error={errorMessage(error)} onRetry={refetch} />
   } else {
-    content = (
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(300px,0.85fr)] lg:gap-8">
-        <Gateway order={order} gateway={gatewayQuery.data} onFinished={() => { finished.current = true }} />
-        <PaymentOrderSummary order={order} />
-      </div>
-    )
+    content = <AmazonCheckoutView order={order} gateway={gatewayQuery.data} onFinished={() => { finished.current = true }} />
   }
 
   return (
-    <CheckoutShell title="Payment" step={2} width="medium" decorations={false}>
+    <CheckoutShell title="Payment" step={2} width="wide" decorations={false}>
       {content}
     </CheckoutShell>
   )
 }
 
-function Gateway({ order, gateway, onFinished }: { order: Order; gateway: PaymentGateway; onFinished: () => void }) {
+function AmazonCheckoutView({
+  order,
+  gateway,
+  onFinished,
+}: {
+  order: Order
+  gateway: PaymentGateway
+  onFinished: () => void
+}) {
   const dispatch = useAppDispatch()
   const isRazorpay = gateway.provider === 'razorpay'
   const [method, setMethod] = useState<Method>('card')
@@ -91,7 +105,6 @@ function Gateway({ order, gateway, onFinished }: { order: Order; gateway: Paymen
       return
     }
     if (payment.status === 'pending') {
-      // Captured by the bank but not yet confirmed; the webhook settles it shortly.
       onFinished()
       toast.info('Payment is being confirmed', { description: 'Your bank is still confirming the payment. We’ll update your order shortly — please don’t pay again.' })
       navigate(`orders/${order.orderNumber}`)
@@ -139,7 +152,6 @@ function Gateway({ order, gateway, onFinished }: { order: Order; gateway: Paymen
     setPhase('processing')
     setFailure(null)
     try {
-      // Keep the processing state on screen long enough to read.
       const [payment] = await Promise.all([payOrder(order.orderNumber, outcome), wait(1600)])
       await settle(payment)
     } catch (err) {
@@ -147,208 +159,410 @@ function Gateway({ order, gateway, onFinished }: { order: Order; gateway: Paymen
     }
   }
 
-  const submit = (event: FormEvent) => {
-    event.preventDefault()
+  const submit = (event?: FormEvent) => {
+    if (event) event.preventDefault()
     void (isRazorpay ? payRazorpay() : pay('success'))
   }
 
   const busy = phase === 'opening' || phase === 'processing' || phase === 'success'
 
   return (
-    <section
-      aria-labelledby="gateway-title"
-      className="relative overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-[0_30px_70px_-35px_rgba(23,63,50,0.55)] dark:border-stone-800 dark:bg-stone-900"
-    >
-      {gateway.testMode && <span className="gateway-ribbon z-10" aria-hidden>Test mode</span>}
-      <header className="bg-gradient-to-br from-[#173f32] via-[#1b4a3b] to-[#0f2b22] px-6 pb-6 pt-5 text-white sm:px-8">
-        <div className="flex items-center gap-3">
-          <span className="grid size-11 place-items-center rounded-2xl bg-[#fffdf8] shadow-inner">
-            <img src={bosscoLogo} alt="" className="size-9 object-contain" />
-          </span>
-          <div>
-            <p className="text-sm font-bold tracking-[0.18em]">BOSSCO</p>
-            <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[#e9cf9f]">
-              <Lock size={10} aria-hidden /> {isRazorpay ? 'Razorpay Secure Checkout' : 'Secure checkout'}
-            </p>
-          </div>
-        </div>
-        <div className="mt-5 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h2 id="gateway-title" className="text-sm text-white/70">Amount to pay</h2>
-            <p className="mt-1 font-display text-[2.6rem] font-bold leading-none">{formatMoney(order.total)}</p>
-          </div>
-          <div className="text-right text-xs text-white/70">
-            Order
-            <b className="mt-0.5 block font-mono text-sm tracking-wide text-white">{order.orderNumber}</b>
-          </div>
-        </div>
-        {gateway.testMode && <p className="sr-only">This is a test-mode payment. No real money is charged.</p>}
-      </header>
-
-      <form onSubmit={submit} noValidate className="relative px-6 pb-7 pt-6 sm:px-8">
-        {!isRazorpay && <div role="tablist" aria-label="Payment method" className="grid grid-cols-2 gap-1 rounded-2xl bg-stone-100 p-1 dark:bg-stone-800">
-          {([
-            ['card', 'Card', CreditCard],
-            ['upi', 'UPI', Smartphone],
-          ] as const).map(([key, label, Icon]) => (
-            <button
-              key={key}
-              type="button"
-              role="tab"
-              id={`pay-tab-${key}`}
-              aria-selected={method === key}
-              aria-controls={`pay-panel-${key}`}
-              onClick={() => setMethod(key)}
-              disabled={busy}
-              className={`flex h-11 items-center justify-center gap-2 rounded-xl text-sm font-bold transition focus-visible:outline-2 focus-visible:outline-[#173f32] ${
-                method === key ? 'bg-white text-[#173f32] shadow-sm dark:bg-stone-950 dark:text-amber-200' : 'text-stone-500 hover:text-stone-700 dark:text-stone-400'
-              }`}
-            >
-              <Icon size={16} aria-hidden /> {label}
-            </button>
-          ))}
-        </div>}
-
-        {failure && phase !== 'processing' && (
-          <div key={attempt} className={`mt-5 flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3.5 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300 ${attempt ? 'gateway-shake' : ''}`} role="alert">
-            <XCircle size={18} className="mt-0.5 flex-none" aria-hidden />
-            <div className="min-w-0 flex-1">
-              <b className="block font-bold">{dismissed ? 'Payment not completed' : 'Payment declined'}</b>
-              <span className="text-rose-700/90 dark:text-rose-300/90">{failure}</span>
-              <span className="mt-1 block text-xs text-rose-600/80 dark:text-rose-400/80">Your order is saved — you can try again.</span>
-            </div>
-            {phase === 'failed' && (
-              <button type="button" onClick={() => { setFailure(null); setPhase('idle') }} className="inline-flex flex-none items-center gap-1 rounded-full bg-white px-3 py-1.5 text-xs font-bold text-rose-700 shadow-sm ring-1 ring-rose-200 hover:bg-rose-100 dark:bg-rose-950 dark:text-rose-200 dark:ring-rose-800">
-                <RotateCcw size={12} aria-hidden /> Try again
-              </button>
-            )}
-          </div>
-        )}
-
-        {isRazorpay ? <RazorpayMethods /> : (
-          <div className="mt-6" role="tabpanel" id={`pay-panel-${method}`} aria-labelledby={`pay-tab-${method}`}>
-            {method === 'card'
-              ? <CardPaymentForm value={card} errors={cardErrors} onChange={(next) => { setCard(next); setCardErrors({}) }} disabled={busy} />
-              : <UpiPaymentForm value={upi} error={upiError} onChange={(next) => { setUpi(next); setUpiError(undefined) }} disabled={busy} />}
-          </div>
-        )}
-
-        <button
-          type="submit"
-          disabled={busy}
-          className="mt-7 inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#173f32] px-6 text-base font-bold text-white shadow-[0_16px_32px_-14px_rgba(23,63,50,0.85)] transition hover:bg-[#1e5040] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#173f32] disabled:opacity-60 dark:bg-amber-300 dark:text-stone-900 dark:hover:bg-amber-200"
-        >
-          <Lock size={17} aria-hidden />{' '}
-          {phase === 'opening'
-            ? 'Complete payment in the Razorpay window…'
-            : isRazorpay
-              ? `Proceed to Pay with Razorpay · ${formatMoney(order.total)}`
-              : `Pay ${formatMoney(order.total)}`}
-        </button>
-        <div className="mt-4 flex flex-col items-center gap-3 text-center">
-          {!isRazorpay && <button
-            type="button"
-            onClick={() => void pay('failure')}
-            disabled={busy}
-            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-stone-500 transition hover:bg-rose-50 hover:text-rose-600 focus-visible:outline-2 focus-visible:outline-rose-500 disabled:opacity-50 dark:text-stone-400 dark:hover:bg-rose-950/40"
+    <div className="relative">
+      <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_370px] xl:grid-cols-[minmax(0,1fr)_390px]">
+        {/* LEFT COLUMN: Amazon-style structured checkout steps */}
+        <div className="space-y-6">
+          {/* STEP 1: Delivery Address */}
+          <section
+            aria-labelledby="step-address-heading"
+            className="rounded-2xl border border-stone-200/90 bg-white p-5 shadow-sm sm:p-6 dark:border-stone-800 dark:bg-stone-900"
           >
-            <AlertOctagon size={13} aria-hidden /> Simulate a declined payment
-          </button>}
-          <p className="flex items-center gap-1.5 text-xs text-stone-400">
-            <ShieldCheck size={14} aria-hidden /> {isRazorpay ? 'Secured by Razorpay · UPI, Cards, Netbanking & Wallets supported' : 'Encrypted · Razorpay-compatible mock gateway'}
-          </p>
+            <div className="flex items-center justify-between gap-4 border-b border-stone-100 pb-3.5 dark:border-stone-800">
+              <div className="flex items-center gap-3">
+                <span className="flex size-7 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white shadow-sm">
+                  <Check size={14} strokeWidth={2.8} />
+                </span>
+                <h2 id="step-address-heading" className="text-base font-bold text-stone-900 dark:text-stone-100">
+                  1. Delivery address
+                </h2>
+              </div>
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
+                Verified
+              </span>
+            </div>
+
+            <div className="mt-4 pl-10 text-sm leading-relaxed text-stone-600 dark:text-stone-300">
+              <p className="font-bold text-stone-900 dark:text-stone-100">{fullName(order.shippingAddress)}</p>
+              <p className="mt-0.5">{formatAddress(order.shippingAddress)}</p>
+              <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">
+                Contact Phone: <span className="font-semibold text-stone-700 dark:text-stone-300">{order.shippingAddress.phone}</span>
+                {order.contactEmail && (
+                  <> · Email updates: <span className="font-semibold text-stone-700 dark:text-stone-300">{order.contactEmail}</span></>
+                )}
+              </p>
+            </div>
+          </section>
+
+          {/* STEP 2: Payment Method (Active Highlighted Step) */}
+          <section
+            aria-labelledby="step-payment-heading"
+            className="relative rounded-2xl border-2 border-[#173f32] bg-white p-5 shadow-md sm:p-6 dark:border-amber-400/80 dark:bg-stone-900"
+          >
+            <div className="flex items-center justify-between gap-4 border-b border-stone-100 pb-4 dark:border-stone-800">
+              <div className="flex items-center gap-3">
+                <span className="flex size-7 items-center justify-center rounded-full bg-[#173f32] text-xs font-bold text-white dark:bg-amber-400 dark:text-stone-950">
+                  2
+                </span>
+                <div>
+                  <h2 id="step-payment-heading" className="text-base font-bold text-stone-900 dark:text-stone-100">
+                    2. Select a payment method
+                  </h2>
+                  <p className="text-xs text-stone-500 dark:text-stone-400">
+                    Encrypted and protected with 256-bit bank-grade security
+                  </p>
+                </div>
+              </div>
+              {gateway.testMode && (
+                <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-900 dark:bg-amber-950/70 dark:text-amber-200">
+                  Test Mode
+                </span>
+              )}
+            </div>
+
+            <form onSubmit={submit} noValidate className="mt-5">
+              {/* Error Alert */}
+              {failure && phase !== 'processing' && (
+                <div
+                  key={attempt}
+                  className={`mb-5 flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300 ${attempt ? 'gateway-shake' : ''}`}
+                  role="alert"
+                >
+                  <XCircle size={18} className="mt-0.5 flex-none" aria-hidden />
+                  <div className="min-w-0 flex-1">
+                    <b className="block font-bold">{dismissed ? 'Payment not completed' : 'Payment declined'}</b>
+                    <span className="text-rose-700/90 dark:text-rose-300/90">{failure}</span>
+                    <span className="mt-1 block text-xs text-rose-600/80 dark:text-rose-400/80">Your items are reserved in your order — feel free to try again.</span>
+                  </div>
+                  {phase === 'failed' && (
+                    <button
+                      type="button"
+                      onClick={() => { setFailure(null); setPhase('idle') }}
+                      className="inline-flex flex-none items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-rose-700 shadow-sm ring-1 ring-rose-200 hover:bg-rose-100 dark:bg-rose-950 dark:text-rose-200 dark:ring-rose-800"
+                    >
+                      <RotateCcw size={12} aria-hidden /> Try again
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* RAZORPAY MODE */}
+              {isRazorpay ? (
+                <div className="space-y-4">
+                  {/* Selected Gateway Box (Amazon Card Style) */}
+                  <div className="rounded-xl border border-emerald-300 bg-emerald-50/50 p-4 sm:p-5 dark:border-emerald-800 dark:bg-emerald-950/20">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 flex size-4 items-center justify-center rounded-full border-2 border-[#173f32] bg-[#173f32] dark:border-amber-400 dark:bg-amber-400">
+                        <div className="size-1.5 rounded-full bg-white dark:bg-stone-900" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="font-bold text-stone-900 dark:text-stone-100">
+                            Razorpay Secure Checkout
+                          </p>
+                          <span className="inline-flex items-center gap-1 rounded bg-[#0c2340] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#3395ff]">
+                            Official Gateway
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs text-stone-600 dark:text-stone-300">
+                          Supports all major Indian payment options. You will complete payment in the secure Razorpay popup:
+                        </p>
+
+                        {/* Supported Badges Grid */}
+                        <div className="mt-3.5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                          <div className="flex flex-col rounded-lg border border-stone-200/80 bg-white p-2.5 text-xs shadow-xs dark:border-stone-700 dark:bg-stone-800">
+                            <span className="flex items-center gap-1.5 font-bold text-stone-900 dark:text-stone-100">
+                              <Smartphone size={14} className="text-[#173f32] dark:text-amber-300" /> UPI / QR
+                            </span>
+                            <span className="text-[10px] text-stone-500 dark:text-stone-400">GPay, PhonePe, Paytm</span>
+                          </div>
+                          <div className="flex flex-col rounded-lg border border-stone-200/80 bg-white p-2.5 text-xs shadow-xs dark:border-stone-700 dark:bg-stone-800">
+                            <span className="flex items-center gap-1.5 font-bold text-stone-900 dark:text-stone-100">
+                              <CreditCard size={14} className="text-[#173f32] dark:text-amber-300" /> Cards
+                            </span>
+                            <span className="text-[10px] text-stone-500 dark:text-stone-400">Visa, Master, RuPay</span>
+                          </div>
+                          <div className="flex flex-col rounded-lg border border-stone-200/80 bg-white p-2.5 text-xs shadow-xs dark:border-stone-700 dark:bg-stone-800">
+                            <span className="flex items-center gap-1.5 font-bold text-stone-900 dark:text-stone-100">
+                              <Building2 size={14} className="text-[#173f32] dark:text-amber-300" /> Netbanking
+                            </span>
+                            <span className="text-[10px] text-stone-500 dark:text-stone-400">All Indian Banks</span>
+                          </div>
+                          <div className="flex flex-col rounded-lg border border-stone-200/80 bg-white p-2.5 text-xs shadow-xs dark:border-stone-700 dark:bg-stone-800">
+                            <span className="flex items-center gap-1.5 font-bold text-stone-900 dark:text-stone-100">
+                              <Wallet size={14} className="text-[#173f32] dark:text-amber-300" /> Wallets
+                            </span>
+                            <span className="text-[10px] text-stone-500 dark:text-stone-400">Amazon Pay & more</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Amazon Callout info */}
+                  <div className="flex items-start gap-2.5 rounded-xl bg-blue-50/70 p-3.5 text-xs text-blue-900 dark:bg-blue-950/40 dark:text-blue-200">
+                    <ShieldCheck size={16} className="mt-0.5 flex-none text-blue-600 dark:text-blue-400" />
+                    <p className="leading-relaxed">
+                      Clicking <b>Place Order and Pay</b> will securely open Razorpay Checkout on this screen. No extra redirects needed.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                /* MOCK MODE */
+                <div>
+                  <div role="tablist" aria-label="Payment method" className="grid grid-cols-2 gap-2 rounded-xl bg-stone-100 p-1.5 dark:bg-stone-800">
+                    {([
+                      ['card', 'Credit / Debit Card', CreditCard],
+                      ['upi', 'UPI / QR', Smartphone],
+                    ] as const).map(([key, label, Icon]) => (
+                      <button
+                        key={key}
+                        type="button"
+                        role="tab"
+                        id={`pay-tab-${key}`}
+                        aria-selected={method === key}
+                        aria-controls={`pay-panel-${key}`}
+                        onClick={() => setMethod(key)}
+                        disabled={busy}
+                        className={`flex h-11 items-center justify-center gap-2 rounded-lg text-sm font-bold transition focus-visible:outline-2 focus-visible:outline-[#173f32] ${
+                          method === key
+                            ? 'bg-white text-stone-900 shadow-sm dark:bg-stone-900 dark:text-amber-200'
+                            : 'text-stone-600 hover:text-stone-900 dark:text-stone-400'
+                        }`}
+                      >
+                        <Icon size={16} aria-hidden /> {label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="mt-5" role="tabpanel" id={`pay-panel-${method}`} aria-labelledby={`pay-tab-${method}`}>
+                    {method === 'card' ? (
+                      <CardPaymentForm value={card} errors={cardErrors} onChange={(next) => { setCard(next); setCardErrors({}) }} disabled={busy} />
+                    ) : (
+                      <UpiPaymentForm value={upi} error={upiError} onChange={(next) => { setUpi(next); setUpiError(undefined) }} disabled={busy} />
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Action Button */}
+              <div className="mt-6 border-t border-stone-100 pt-5 dark:border-stone-800">
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="flex h-13 w-full items-center justify-center gap-2 rounded-xl bg-[#ffc220] px-6 text-base font-bold text-stone-950 shadow-sm transition hover:bg-[#eab016] active:bg-[#d89e0b] focus-visible:outline-2 focus-visible:outline-[#ffc220] disabled:opacity-50 sm:w-auto sm:min-w-[280px]"
+                >
+                  <Lock size={16} aria-hidden />{' '}
+                  {phase === 'opening'
+                    ? 'Opening Razorpay…'
+                    : isRazorpay
+                      ? `Place Order and Pay · ${formatMoney(order.total)}`
+                      : `Pay ${formatMoney(order.total)}`}
+                </button>
+
+                {!isRazorpay && (
+                  <button
+                    type="button"
+                    onClick={() => void pay('failure')}
+                    disabled={busy}
+                    className="mt-3 block text-xs font-semibold text-rose-600 hover:underline dark:text-rose-400"
+                  >
+                    Simulate a declined payment
+                  </button>
+                )}
+              </div>
+            </form>
+          </section>
+
+          {/* STEP 3: Review Items and Delivery */}
+          <section
+            aria-labelledby="step-items-heading"
+            className="rounded-2xl border border-stone-200/90 bg-white p-5 shadow-sm sm:p-6 dark:border-stone-800 dark:bg-stone-900"
+          >
+            <div className="flex items-center gap-3 border-b border-stone-100 pb-3.5 dark:border-stone-800">
+              <span className="flex size-7 items-center justify-center rounded-full bg-stone-200 text-xs font-bold text-stone-700 dark:bg-stone-800 dark:text-stone-300">
+                3
+              </span>
+              <div>
+                <h2 id="step-items-heading" className="text-base font-bold text-stone-900 dark:text-stone-100">
+                  3. Review items and shipping
+                </h2>
+                <p className="text-xs text-stone-500 dark:text-stone-400">
+                  {order.itemCount} {order.itemCount === 1 ? 'item' : 'items'} in your shipment
+                </p>
+              </div>
+            </div>
+
+            {/* Delivery Banner */}
+            <div className="mt-4 flex items-center gap-3 rounded-xl bg-stone-50 p-3.5 text-xs text-stone-700 dark:bg-stone-800/60 dark:text-stone-300">
+              <Truck size={18} className="flex-none text-[#173f32] dark:text-amber-300" aria-hidden />
+              <div>
+                <span className="font-bold text-stone-900 dark:text-stone-100">Standard Delivery</span>
+                <span className="mx-1.5 text-stone-400">·</span>
+                <span>Direct from harvest, vacuum packed for freshness</span>
+              </div>
+            </div>
+
+            {/* Items List */}
+            <ul className="mt-4 divide-y divide-stone-100 dark:divide-stone-800">
+              {order.items.map((item) => (
+                <li key={item.id} className="flex items-center gap-4 py-3.5">
+                  <div className="size-16 flex-none overflow-hidden rounded-xl border border-stone-200 bg-stone-50 p-1 dark:border-stone-700 dark:bg-stone-800">
+                    {item.imageUrl ? (
+                      <img src={item.imageUrl} alt="" className="size-full rounded-lg object-cover" />
+                    ) : (
+                      <div className="grid size-full place-items-center text-xs text-stone-400">Item</div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-stone-900 dark:text-stone-100 truncate">
+                      {item.productName}
+                    </p>
+                    <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">
+                      Variant: <span className="font-medium text-stone-700 dark:text-stone-200">{item.variantLabel}</span> · Qty: <span className="font-bold text-stone-800 dark:text-stone-100">{item.quantity}</span>
+                    </p>
+                  </div>
+                  <div className="flex-none text-right">
+                    <p className="text-sm font-extrabold text-stone-900 dark:text-stone-100">{formatMoney(item.lineTotal)}</p>
+                    {item.quantity > 1 && (
+                      <p className="text-[11px] text-stone-400">{formatMoney(item.unitPrice)} each</p>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
         </div>
-      </form>
 
-      {(phase === 'processing' || phase === 'success') && <PaymentProcessing success={phase === 'success'} />}
-    </section>
-  )
-}
+        {/* RIGHT COLUMN: Sticky Amazon-Inspired Order Summary */}
+        <aside className="lg:sticky lg:top-28">
+          <div className="rounded-2xl border border-stone-200/90 bg-white p-6 shadow-sm dark:border-stone-800 dark:bg-stone-900">
+            {/* Top Primary Place Order Button (Amazon Pattern) */}
+            <button
+              type="button"
+              onClick={() => submit()}
+              disabled={busy}
+              className="w-full rounded-xl bg-[#ffc220] py-3.5 px-4 text-center text-sm font-bold text-stone-950 shadow-sm transition hover:bg-[#eab016] active:bg-[#d89e0b] focus-visible:outline-2 focus-visible:outline-[#ffc220] disabled:opacity-50"
+            >
+              {phase === 'opening'
+                ? 'Opening Razorpay…'
+                : isRazorpay
+                  ? `Place Your Order and Pay`
+                  : `Pay ${formatMoney(order.total)}`}
+            </button>
+            <p className="mt-2 text-center text-[11px] leading-tight text-stone-500 dark:text-stone-400">
+              By placing your order, you agree to Bossco's Terms of Use and Privacy Policy.
+            </p>
 
-function RazorpayMethods() {
-  return (
-    <div className="mt-6 rounded-2xl border border-emerald-900/30 bg-gradient-to-br from-[#173f32] via-[#1a4738] to-[#0f2b22] p-5 text-white shadow-inner">
-      <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-3">
-        <div className="flex items-center gap-2.5">
-          <span className="flex size-7 items-center justify-center rounded-lg bg-[#0c2340] font-black italic tracking-tighter text-[#3395ff] shadow-sm">
-            R
-          </span>
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-white">Razorpay Secure</p>
-            <p className="text-[10px] text-white/70">Official payment gateway</p>
+            <div className="my-5 border-t border-stone-200 dark:border-stone-800" />
+
+            <h3 className="text-base font-bold text-stone-900 dark:text-stone-100">Order Summary</h3>
+
+            <div className="mt-3.5 space-y-2.5 text-sm text-stone-600 dark:text-stone-300">
+              <div className="flex justify-between">
+                <span>Items ({order.itemCount}):</span>
+                <span className="font-medium text-stone-900 dark:text-stone-100">{formatMoney(order.subtotal)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Delivery:</span>
+                <span className="font-medium text-stone-900 dark:text-stone-100">
+                  {order.shippingFee === 0 ? <span className="font-bold text-emerald-600">FREE</span> : formatMoney(order.shippingFee)}
+                </span>
+              </div>
+              {order.discount > 0 && (
+                <div className="flex justify-between font-medium text-emerald-600">
+                  <span>Promotion applied:</span>
+                  <span>-{formatMoney(order.discount)}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="my-4 border-t border-stone-200 dark:border-stone-800" />
+
+            <div className="flex items-baseline justify-between">
+              <span className="text-base font-bold text-stone-900 dark:text-stone-100">Order Total:</span>
+              <span className="font-display text-2xl font-extrabold text-[#173f32] dark:text-amber-300">
+                {formatMoney(order.total)}
+              </span>
+            </div>
+
+            {order.discount > 0 && (
+              <div className="mt-3 rounded-lg bg-emerald-50 py-2 text-center text-xs font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                You saved {formatMoney(order.discount)} on this order!
+              </div>
+            )}
+
+            {/* Reassurance Badges */}
+            <div className="mt-6 space-y-2.5 rounded-xl bg-stone-50 p-4 text-xs text-stone-600 dark:bg-stone-800/50 dark:text-stone-300">
+              <div className="flex items-center gap-2">
+                <ShieldCheck size={16} className="flex-none text-emerald-600 dark:text-emerald-400" />
+                <span><b>100% Purchase Protection</b></span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Lock size={16} className="flex-none text-stone-500 dark:text-stone-400" />
+                <span><b>256-bit SSL</b> secure encryption</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Sparkles size={16} className="flex-none text-amber-600 dark:text-amber-400" />
+                <span><b>Certified Pure</b> farm-fresh harvest</span>
+              </div>
+            </div>
+
+            {/* Helper link */}
+            <div className="mt-4 text-center">
+              <a
+                href={`#orders/${order.orderNumber}`}
+                className="text-xs font-semibold text-stone-500 hover:text-stone-900 hover:underline dark:text-stone-400 dark:hover:text-stone-100"
+              >
+                Order #{order.orderNumber} · Need to pay later?
+              </a>
+            </div>
           </div>
-        </div>
-        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-400/20 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-200 ring-1 ring-emerald-400/30">
-          Instant & Encrypted
-        </span>
+        </aside>
       </div>
 
-      <p className="mt-3.5 text-xs text-white/80">
-        You will complete your payment in Razorpay’s official window. All methods accepted:
-      </p>
-
-      <ul className="mt-3.5 grid grid-cols-2 gap-2 text-xs font-medium sm:grid-cols-4">
-        {[
-          { label: 'UPI / QR', sub: 'GPay, PhonePe, Paytm', Icon: Smartphone },
-          { label: 'Cards', sub: 'Visa, Master, RuPay', Icon: CreditCard },
-          { label: 'Netbanking', sub: 'All Indian Banks', Icon: Building2 },
-          { label: 'Wallets', sub: 'Amazon Pay & more', Icon: Wallet },
-        ].map(({ label, sub, Icon }) => (
-          <li key={label} className="flex flex-col gap-1 rounded-xl bg-white/10 p-2.5 backdrop-blur-sm">
-            <span className="flex items-center gap-1.5 font-bold text-white">
-              <Icon size={14} className="text-[#e9cf9f]" aria-hidden /> {label}
-            </span>
-            <span className="text-[10px] text-white/60">{sub}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  )
-}
-
-function PaymentOrderSummary({ order }: { order: Order }) {
-  return (
-    <div className="grid gap-5 lg:sticky lg:top-32">
-      <Panel as="aside" title="Order summary" subtitle={`${order.itemCount} ${order.itemCount === 1 ? 'item' : 'items'}`}>
-        <ul className="grid gap-4 py-1.5">
-          {order.items.map((item) => (
-            <SummaryLine key={item.id} name={item.productName} variantLabel={item.variantLabel} imageUrl={item.imageUrl} quantity={item.quantity} lineTotal={item.lineTotal} />
-          ))}
-        </ul>
-        <div className="mt-5 border-t border-stone-200 pt-5 dark:border-stone-800">
-          <PriceRows subtotal={order.subtotal} discount={order.discount} couponCode={order.couponCode} shippingFee={order.shippingFee} total={order.total} />
-        </div>
-      </Panel>
-      <Panel>
-        <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-stone-500 dark:text-stone-400">Delivering to</h3>
-        <p className="mt-2 text-sm font-bold text-stone-800 dark:text-stone-100">{fullName(order.shippingAddress)}</p>
-        <p className="mt-0.5 text-sm leading-relaxed text-stone-500 dark:text-stone-400">{formatAddress(order.shippingAddress)}</p>
-        <p className="mt-4 border-t border-stone-200 pt-4 text-xs text-stone-500 dark:border-stone-800 dark:text-stone-400">
-          Not ready? Your order is saved —{' '}
-          <a href={`#orders/${order.orderNumber}`} className="font-bold text-[#173f32] hover:underline dark:text-amber-200">pay later from your order page</a>.
-        </p>
-      </Panel>
+      {/* Processing overlay */}
+      {(phase === 'processing' || phase === 'success') && <PaymentProcessing success={phase === 'success'} />}
     </div>
   )
 }
 
 function PaymentSkeleton() {
   return (
-    <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(300px,0.85fr)] lg:gap-8" role="status" aria-label="Loading payment">
-      <div className="overflow-hidden rounded-[2rem] border border-stone-200 bg-white dark:border-stone-800 dark:bg-stone-900">
-        <Skeleton className="h-36 rounded-none" />
-        <div className="space-y-4 p-8">
-          <Skeleton className="h-12 rounded-2xl" />
-          <Skeleton className="mx-auto h-48 max-w-[340px] rounded-2xl" />
-          <Skeleton className="h-12 rounded-xl" />
-          <Skeleton className="h-14 rounded-2xl" />
+    <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_370px]" role="status" aria-label="Loading payment">
+      <div className="space-y-6">
+        <div className="rounded-2xl border border-stone-200 bg-white p-6 dark:border-stone-800 dark:bg-stone-900">
+          <Skeleton className="h-6 w-44" />
+          <Skeleton className="mt-3 h-14" />
+        </div>
+        <div className="rounded-2xl border border-stone-200 bg-white p-6 dark:border-stone-800 dark:bg-stone-900">
+          <Skeleton className="h-6 w-52" />
+          <Skeleton className="mt-4 h-32" />
+          <Skeleton className="mt-4 h-12 w-48" />
+        </div>
+        <div className="rounded-2xl border border-stone-200 bg-white p-6 dark:border-stone-800 dark:bg-stone-900">
+          <Skeleton className="h-6 w-60" />
+          <Skeleton className="mt-4 h-24" />
         </div>
       </div>
-      <Panel>
-        <Skeleton className="h-5 w-36" />
-        <Skeleton className="mt-5 h-14" />
-        <Skeleton className="mt-6 h-24" />
-      </Panel>
+      <div>
+        <div className="rounded-2xl border border-stone-200 bg-white p-6 dark:border-stone-800 dark:bg-stone-900">
+          <Skeleton className="h-12 w-full rounded-xl" />
+          <Skeleton className="my-5 h-px w-full" />
+          <Skeleton className="h-5 w-32" />
+          <Skeleton className="mt-4 h-20" />
+          <Skeleton className="my-4 h-px w-full" />
+          <Skeleton className="h-8 w-full" />
+        </div>
+      </div>
     </div>
   )
 }
