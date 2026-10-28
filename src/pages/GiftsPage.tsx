@@ -14,6 +14,12 @@ import type { GiftBudgetTier, GiftEnquiryKind, GiftOccasion, GiftPageContent, Pr
 import { navigate } from '../utils/router'
 import heroFallback from '../assets/images/unsplash-dry-fruit-bowls.webp'
 import bulkFallback from '../assets/images/unsplash-dry-fruit-market.webp'
+import customizeFallback from '../assets/images/gift-customize-banner.webp'
+import occasionWeddingsFallback from '../assets/images/occasion-weddings.webp'
+import occasionBabyShowerFallback from '../assets/images/occasion-baby-shower.webp'
+import occasionHouseWarmingFallback from '../assets/images/occasion-house-warming.webp'
+import occasionBirthdayFallback from '../assets/images/occasion-birthday.webp'
+import occasionCorporateFallback from '../assets/images/occasion-corporate.webp'
 
 const PAGE_SIZE = 8
 
@@ -282,15 +288,28 @@ function CustomizeBanner({ customize, onStart }: { customize: GiftPageContent['c
             )}
           </div>
         </div>
-        {customize.imageUrl && (
-          <img src={customize.imageUrl} alt="" loading="lazy" className="relative mx-auto aspect-[4/3] w-full max-w-xs rounded-xl object-cover shadow-xl md:justify-self-end" />
-        )}
+        <img
+          src={customize.imageUrl ?? customizeFallback}
+          alt=""
+          loading="lazy"
+          className="relative mx-auto aspect-[4/3] w-full max-w-xs rounded-xl object-cover shadow-xl md:justify-self-end"
+        />
       </div>
     </section>
   )
 }
 
+/** Fallback images for occasion cards that don't yet have an admin-uploaded photo. */
+const OCCASION_FALLBACKS: Record<string, string> = {
+  'weddings': occasionWeddingsFallback,
+  'baby-shower': occasionBabyShowerFallback,
+  'house-warming': occasionHouseWarmingFallback,
+  'birthday-party': occasionBirthdayFallback,
+  'corporate-events': occasionCorporateFallback,
+}
+
 function OccasionShowcase({ title, occasions, onSelect }: { title: string; occasions: GiftOccasion[]; onSelect: (slug: string) => void }) {
+
   if (!occasions.length) return null
   return (
     <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
@@ -304,13 +323,12 @@ function OccasionShowcase({ title, occasions, onSelect }: { title: string; occas
             onClick={() => onSelect(item.slug)}
             className="group relative isolate block aspect-[4/3.3] overflow-hidden rounded-2xl text-left shadow-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#173f32]"
           >
-            {item.imageUrl ? (
-              <img src={item.imageUrl} alt="" loading="lazy" className="absolute inset-0 -z-20 size-full object-cover transition duration-700 group-hover:scale-105" />
-            ) : (
-              <span className="absolute inset-0 -z-20 grid place-items-center bg-gradient-to-br from-[#2b5a45] to-[#0f2b22]" aria-hidden>
-                <Gift size={64} className="text-white/20" />
-              </span>
-            )}
+            <img
+              src={item.imageUrl ?? OCCASION_FALLBACKS[item.slug] ?? occasionWeddingsFallback}
+              alt=""
+              loading="lazy"
+              className="absolute inset-0 -z-20 size-full object-cover transition duration-700 group-hover:scale-105"
+            />
             <span className="absolute inset-0 -z-10 bg-gradient-to-t from-black/75 via-black/25 to-transparent" aria-hidden />
             <span className="absolute inset-x-0 bottom-0 p-5 text-white">
               <span className="block font-display text-2xl font-bold">{item.name}</span>
