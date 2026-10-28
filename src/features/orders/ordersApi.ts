@@ -1,6 +1,6 @@
 import { api, run } from '../../app/api'
-import { ordersRepository } from '../../repositories/ordersRepository'
-import type { CheckoutInput, Order, PageQuery, Paginated } from '../../types/api'
+import { ordersRepository, paymentsRepository } from '../../repositories/ordersRepository'
+import type { CheckoutInput, Order, PageQuery, Paginated, PaymentGateway } from '../../types/api'
 
 export const ordersApi = api.injectEndpoints({
   endpoints: (build) => ({
@@ -21,7 +21,11 @@ export const ordersApi = api.injectEndpoints({
       queryFn: (orderNumber) => run(ordersRepository.cancel(orderNumber)),
       invalidatesTags: (_result, _error, orderNumber) => ['Orders', { type: 'Order', id: orderNumber }],
     }),
+    getPaymentGateway: build.query<PaymentGateway, void>({
+      queryFn: () => run(paymentsRepository.gateway()),
+      keepUnusedDataFor: 3600,
+    }),
   }),
 })
 
-export const { useGetOrdersQuery, useGetOrderQuery, usePlaceOrderMutation, useCancelOrderMutation } = ordersApi
+export const { useGetOrdersQuery, useGetOrderQuery, usePlaceOrderMutation, useCancelOrderMutation, useGetPaymentGatewayQuery } = ordersApi

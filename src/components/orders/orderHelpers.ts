@@ -47,4 +47,4 @@ export const etaLabel = (order: Pick<Order, 'status' | 'tracking'>) => {
   return order.status === 'out_for_delivery' ? `Arriving ${relativeDay(eta) === 'today' ? 'today' : `by ${formatShortDay(eta)}`}` : `Arriving by ${formatShortDay(eta)}`
 }
 
-export const paymentMethodLabel = 'Card · Test mode'
+export const paymentMethodLabel = 'Paid online · Razorpay'

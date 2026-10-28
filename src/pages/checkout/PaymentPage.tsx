@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { AlertOctagon, CreditCard, Lock, RotateCcw, ShieldCheck, Smartphone, XCircle } from 'lucide-react'
+import { AlertOctagon, Building2, CreditCard, Lock, RotateCcw, ShieldCheck, Smartphone, Wallet, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAppDispatch } from '../../app/hooks'
 import { CardPaymentForm } from '../../components/checkout/CardPaymentForm'
@@ -14,20 +14,22 @@ import { UpiPaymentForm } from '../../components/checkout/UpiPaymentForm'
 import bosscoLogo from '../../assets/images/Bossco_Logo__2__page-0001-removebg-preview.webp'
 import { OrderNotFound } from '../../components/orders/OrderNotFound'
 import { isNotFound, isPayable } from '../../components/orders/orderHelpers'
-import { ordersApi, useGetOrderQuery } from '../../features/orders/ordersApi'
+import { ordersApi, useGetOrderQuery, useGetPaymentGatewayQuery } from '../../features/orders/ordersApi'
 import { errorMessage } from '../../lib/http/apiClient'
-import { payOrder } from '../../services/paymentService'
-import type { MockOutcome, Order } from '../../types/api'
+import { payOrder, payWithRazorpay } from '../../services/paymentService'
+import { CHECKOUT_DISMISSED } from '../../services/razorpayCheckout'
+import type { MockOutcome, Order, Payment, PaymentGateway } from '../../types/api'
 import { formatAddress, formatMoney, fullName } from '../../utils/format'
 import { navigate } from '../../utils/router'
 
 type Method = 'card' | 'upi'
-type Phase = 'idle' | 'processing' | 'success' | 'failed'
+type Phase = 'idle' | 'opening' | 'processing' | 'success' | 'failed'
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 export function PaymentPage({ orderNumber }: { orderNumber: string }) {
   const { data: order, isLoading, error, refetch } = useGetOrderQuery(orderNumber, { skip: !orderNumber, refetchOnMountOrArgChange: true })
+  const gatewayQuery = useGetPaymentGatewayQuery()
   const finished = useRef(false)
 
   // Already paid / cancelled → the order page is the right place.
@@ -36,15 +38,17 @@ export function PaymentPage({ orderNumber }: { orderNumber: string }) {
   }, [order])
 
   let content
-  if (isLoading) content = <PaymentSkeleton />
-  else if (!order) {
+  if (isLoading || gatewayQuery.isLoading) content = <PaymentSkeleton />
+  else if (!gatewayQuery.data) {
+    content = <OrderNotFound orderNumber={orderNumber} error={errorMessage(gatewayQuery.error)} onRetry={gatewayQuery.refetch} />
+  } else if (!order) {
     content = isNotFound(error) || !orderNumber
       ? <OrderNotFound orderNumber={orderNumber} />
       : <OrderNotFound orderNumber={orderNumber} error={errorMessage(error)} onRetry={refetch} />
   } else {
     content = (
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(300px,0.85fr)] lg:gap-8">
-        <Gateway order={order} onFinished={() => { finished.current = true }} />
+        <Gateway order={order} gateway={gatewayQuery.data} onFinished={() => { finished.current = true }} />
         <PaymentOrderSummary order={order} />
       </div>
     )
@@ -57,8 +61,9 @@ export function PaymentPage({ orderNumber }: { orderNumber: string }) {
   )
 }
 
-function Gateway({ order, onFinished }: { order: Order; onFinished: () => void }) {
+function Gateway({ order, gateway, onFinished }: { order: Order; gateway: PaymentGateway; onFinished: () => void }) {
   const dispatch = useAppDispatch()
+  const isRazorpay = gateway.provider === 'razorpay'
   const [method, setMethod] = useState<Method>('card')
   const [card, setCard] = useState<CardDraft>(() => ({
     number: TEST_CARD_NUMBER,
@@ -72,8 +77,53 @@ function Gateway({ order, onFinished }: { order: Order; onFinished: () => void }
   const [phase, setPhase] = useState<Phase>('idle')
   const [failure, setFailure] = useState<string | null>(order.status === 'payment_failed' ? 'Your previous payment attempt didn’t go through.' : null)
   const [attempt, setAttempt] = useState(0)
+  const [dismissed, setDismissed] = useState(false)
 
   const refreshOrder = () => dispatch(ordersApi.util.invalidateTags(['Orders', { type: 'Order', id: order.orderNumber }]))
+
+  const settle = async (payment: Payment) => {
+    if (payment.status === 'succeeded') {
+      onFinished()
+      setPhase('success')
+      await wait(900)
+      navigate(`order-complete/${order.orderNumber}`)
+      refreshOrder()
+      return
+    }
+    if (payment.status === 'pending') {
+      // Captured by the bank but not yet confirmed; the webhook settles it shortly.
+      onFinished()
+      toast.info('Payment is being confirmed', { description: 'Your bank is still confirming the payment. We’ll update your order shortly — please don’t pay again.' })
+      navigate(`orders/${order.orderNumber}`)
+      refreshOrder()
+      return
+    }
+    setPhase('failed')
+    setAttempt((current) => current + 1)
+    setDismissed(false)
+    setFailure(payment.failureReason ?? 'The payment was not completed.')
+    refreshOrder()
+  }
+
+  const fail = (err: unknown) => {
+    const closedByCustomer = err instanceof Error && 'code' in err && err.code === CHECKOUT_DISMISSED
+    setPhase('failed')
+    setAttempt((current) => current + 1)
+    setDismissed(closedByCustomer)
+    setFailure(errorMessage(err))
+    if (!closedByCustomer) toast.error('Payment failed', { description: errorMessage(err) })
+    refreshOrder()
+  }
+
+  const payRazorpay = async () => {
+    setPhase('opening')
+    setFailure(null)
+    try {
+      await settle(await payWithRazorpay(order, () => setPhase('processing')))
+    } catch (err) {
+      fail(err)
+    }
+  }
 
   const pay = async (outcome: MockOutcome) => {
     if (outcome === 'success') {
@@ -91,40 +141,25 @@ function Gateway({ order, onFinished }: { order: Order; onFinished: () => void }
     try {
       // Keep the processing state on screen long enough to read.
       const [payment] = await Promise.all([payOrder(order.orderNumber, outcome), wait(1600)])
-      if (payment.status === 'succeeded') {
-        onFinished()
-        setPhase('success')
-        await wait(900)
-        navigate(`order-complete/${order.orderNumber}`)
-        refreshOrder()
-        return
-      }
-      setPhase('failed')
-      setAttempt((current) => current + 1)
-      setFailure(payment.failureReason ?? 'The payment was not completed.')
-      refreshOrder()
+      await settle(payment)
     } catch (err) {
-      setPhase('failed')
-      setAttempt((current) => current + 1)
-      setFailure(errorMessage(err))
-      toast.error('Payment failed', { description: errorMessage(err) })
-      refreshOrder()
+      fail(err)
     }
   }
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
-    void pay('success')
+    void (isRazorpay ? payRazorpay() : pay('success'))
   }
 
-  const busy = phase === 'processing' || phase === 'success'
+  const busy = phase === 'opening' || phase === 'processing' || phase === 'success'
 
   return (
     <section
       aria-labelledby="gateway-title"
       className="relative overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-[0_30px_70px_-35px_rgba(23,63,50,0.55)] dark:border-stone-800 dark:bg-stone-900"
     >
-      <span className="gateway-ribbon z-10" aria-hidden>Test mode</span>
+      {gateway.testMode && <span className="gateway-ribbon z-10" aria-hidden>Test mode</span>}
       <header className="bg-gradient-to-br from-[#173f32] via-[#1b4a3b] to-[#0f2b22] px-6 pb-6 pt-5 text-white sm:px-8">
         <div className="flex items-center gap-3">
           <span className="grid size-11 place-items-center rounded-2xl bg-[#fffdf8] shadow-inner">
@@ -145,11 +180,11 @@ function Gateway({ order, onFinished }: { order: Order; onFinished: () => void }
             <b className="mt-0.5 block font-mono text-sm tracking-wide text-white">{order.orderNumber}</b>
           </div>
         </div>
-        <p className="sr-only">This is a simulated test-mode payment. No real money is charged.</p>
+        {gateway.testMode && <p className="sr-only">This is a test-mode payment. No real money is charged.</p>}
       </header>
 
       <form onSubmit={submit} noValidate className="relative px-6 pb-7 pt-6 sm:px-8">
-        <div role="tablist" aria-label="Payment method" className="grid grid-cols-2 gap-1 rounded-2xl bg-stone-100 p-1 dark:bg-stone-800">
+        {!isRazorpay && <div role="tablist" aria-label="Payment method" className="grid grid-cols-2 gap-1 rounded-2xl bg-stone-100 p-1 dark:bg-stone-800">
           {([
             ['card', 'Card', CreditCard],
             ['upi', 'UPI', Smartphone],
@@ -170,13 +205,13 @@ function Gateway({ order, onFinished }: { order: Order; onFinished: () => void }
               <Icon size={16} aria-hidden /> {label}
             </button>
           ))}
-        </div>
+        </div>}
 
         {failure && phase !== 'processing' && (
           <div key={attempt} className={`mt-5 flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3.5 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300 ${attempt ? 'gateway-shake' : ''}`} role="alert">
             <XCircle size={18} className="mt-0.5 flex-none" aria-hidden />
             <div className="min-w-0 flex-1">
-              <b className="block font-bold">Payment declined</b>
+              <b className="block font-bold">{dismissed ? 'Payment not completed' : 'Payment declined'}</b>
               <span className="text-rose-700/90 dark:text-rose-300/90">{failure}</span>
               <span className="mt-1 block text-xs text-rose-600/80 dark:text-rose-400/80">Your order is saved — you can try again.</span>
             </div>
@@ -188,36 +223,60 @@ function Gateway({ order, onFinished }: { order: Order; onFinished: () => void }
           </div>
         )}
 
-        <div className="mt-6" role="tabpanel" id={`pay-panel-${method}`} aria-labelledby={`pay-tab-${method}`}>
-          {method === 'card'
-            ? <CardPaymentForm value={card} errors={cardErrors} onChange={(next) => { setCard(next); setCardErrors({}) }} disabled={busy} />
-            : <UpiPaymentForm value={upi} error={upiError} onChange={(next) => { setUpi(next); setUpiError(undefined) }} disabled={busy} />}
-        </div>
+        {isRazorpay ? <RazorpayMethods /> : (
+          <div className="mt-6" role="tabpanel" id={`pay-panel-${method}`} aria-labelledby={`pay-tab-${method}`}>
+            {method === 'card'
+              ? <CardPaymentForm value={card} errors={cardErrors} onChange={(next) => { setCard(next); setCardErrors({}) }} disabled={busy} />
+              : <UpiPaymentForm value={upi} error={upiError} onChange={(next) => { setUpi(next); setUpiError(undefined) }} disabled={busy} />}
+          </div>
+        )}
 
         <button
           type="submit"
           disabled={busy}
           className="mt-7 inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#173f32] px-6 text-base font-bold text-white shadow-[0_16px_32px_-14px_rgba(23,63,50,0.85)] transition hover:bg-[#1e5040] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#173f32] disabled:opacity-60 dark:bg-amber-300 dark:text-stone-900 dark:hover:bg-amber-200"
         >
-          <Lock size={17} aria-hidden /> Pay {formatMoney(order.total)}
+          <Lock size={17} aria-hidden /> {phase === 'opening' ? 'Complete payment in the Razorpay window…' : `Pay ${formatMoney(order.total)}`}
         </button>
         <div className="mt-4 flex flex-col items-center gap-3 text-center">
-          <button
+          {!isRazorpay && <button
             type="button"
             onClick={() => void pay('failure')}
             disabled={busy}
             className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-stone-500 transition hover:bg-rose-50 hover:text-rose-600 focus-visible:outline-2 focus-visible:outline-rose-500 disabled:opacity-50 dark:text-stone-400 dark:hover:bg-rose-950/40"
           >
             <AlertOctagon size={13} aria-hidden /> Simulate a declined payment
-          </button>
+          </button>}
           <p className="flex items-center gap-1.5 text-xs text-stone-400">
-            <ShieldCheck size={14} aria-hidden /> Encrypted · Razorpay-compatible mock gateway
+            <ShieldCheck size={14} aria-hidden /> {isRazorpay ? 'Secured by Razorpay · We never see your card or UPI details' : 'Encrypted · Razorpay-compatible mock gateway'}
           </p>
         </div>
       </form>
 
-      {busy && <PaymentProcessing success={phase === 'success'} />}
+      {(phase === 'processing' || phase === 'success') && <PaymentProcessing success={phase === 'success'} />}
     </section>
+  )
+}
+
+function RazorpayMethods() {
+  return (
+    <div className="mt-6 rounded-2xl bg-gradient-to-br from-[#173f32] to-[#0f2b22] p-5 text-white">
+      <p className="text-sm leading-relaxed text-white/80">
+        You’ll complete the payment in Razorpay’s secure window. Choose any method there:
+      </p>
+      <ul className="mt-4 grid grid-cols-2 gap-2 text-xs font-bold sm:grid-cols-4">
+        {([
+          ['UPI', Smartphone],
+          ['Cards', CreditCard],
+          ['Netbanking', Building2],
+          ['Wallets', Wallet],
+        ] as const).map(([label, Icon]) => (
+          <li key={label} className="flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2.5">
+            <Icon size={15} aria-hidden /> {label}
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
 

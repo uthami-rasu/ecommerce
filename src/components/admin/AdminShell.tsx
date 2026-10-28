@@ -1,4 +1,5 @@
 import {
+  Gift,
   Layers,
   LayoutDashboard,
   LogOut,
@@ -21,7 +22,7 @@ import { navigate } from '../../utils/router'
 import { Dialog } from './Dialog'
 import { btn } from './styles'
 
-export type AdminSection = 'dashboard' | 'orders' | 'products' | 'categories' | 'customers' | 'settings'
+export type AdminSection = 'dashboard' | 'orders' | 'products' | 'categories' | 'gifting' | 'customers' | 'settings'
 
 type NavItem = { id: AdminSection; label: string; href: string; icon: LucideIcon; badge?: number }
 
@@ -169,6 +170,7 @@ export function AdminShell({ active, children }: { active: AdminSection; childre
     { id: 'dashboard', label: 'Dashboard', href: '#admin', icon: LayoutDashboard },
     { id: 'products', label: 'Products', href: '#admin/products', icon: Package },
     { id: 'categories', label: 'Categories', href: '#admin/categories', icon: Layers },
+    { id: 'gifting', label: 'Return Gifts', href: '#admin/gifting', icon: Gift },
     { id: 'orders', label: 'Orders', href: '#admin/orders', icon: ShoppingBag, badge: awaiting },
     { id: 'customers', label: 'Customers', href: '#admin/customers', icon: Users },
     { id: 'settings', label: 'Settings', href: '#admin/settings', icon: Settings },

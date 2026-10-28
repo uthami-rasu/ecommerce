@@ -266,6 +266,10 @@ export type ProductQuery = PageQuery & {
   featured?: boolean
   trending?: boolean
   inStock?: boolean
+  /** Only products on the Return Gifts page. */
+  gift?: boolean
+  /** Gift occasion slug. */
+  occasion?: string
 }
 
 export type Review = {
@@ -437,6 +441,19 @@ export type PaymentInitiation = Payment & { checkout: Record<string, unknown> }
 
 export type MockCheckoutResult = { providerOrderId: string; providerPaymentId: string; signature: string }
 
+/** Which checkout the API is configured for (GET /payments/gateway). */
+export type PaymentGateway = { provider: 'razorpay' | 'mock'; testMode: boolean }
+
+/** `checkout` payload of a Razorpay payment initiation. Contains only the public key id. */
+export type RazorpayCheckoutConfig = {
+  provider: 'razorpay'
+  keyId: string
+  providerOrderId: string
+  amount: number
+  currency: string
+  receipt: string
+}
+
 // ── Admin ────────────────────────────────────────────────
 
 export type AdminOrderListItem = {
@@ -479,4 +496,68 @@ export type Dashboard = {
   ordersByStatus: Partial<Record<OrderStatus, number>>
   salesLast30Days: Array<{ date: string; orders: number; revenue: number }>
   [key: string]: unknown
+}
+
+// ── Return gifts ─────────────────────────────────────────
+
+export const GIFT_ICONS = ['tag', 'flame', 'crown', 'gem', 'gift', 'percent', 'truck', 'package', 'shield', 'sparkles', 'heart', 'headset', 'star', 'leaf', 'wand', 'award'] as const
+export type GiftIcon = (typeof GIFT_ICONS)[number]
+export type GiftImageSlot = 'hero' | 'customize' | 'bulk'
+
+export type GiftBudgetTier = { label: string; title: string; minPrice: number | null; maxPrice: number | null; icon: GiftIcon }
+export type GiftPoint = { title: string; body: string; icon: GiftIcon }
+export type GiftFeature = { title: string; subtitle: string; icon: GiftIcon }
+
+export type GiftPageContent = {
+  hero: {
+    eyebrow: string
+    title: string
+    subtitle: string
+    imageUrl: string | null
+    callLabel: string
+    phone: string
+    whatsappLabel: string
+    whatsappNumber: string
+    whatsappMessage: string
+  }
+  listing: { title: string }
+  customize: { enabled: boolean; title: string; body: string; ctaLabel: string; note: string; imageUrl: string | null }
+  occasions: { enabled: boolean; title: string }
+  budget: { enabled: boolean; title: string; subtitle: string; tiers: GiftBudgetTier[] }
+  bulk: { enabled: boolean; title: string; points: GiftPoint[]; ctaLabel: string; imageUrl: string | null }
+  features: { enabled: boolean; items: GiftFeature[] }
+}
+
+export type GiftOccasion = { id: string; name: string; slug: string; tagline: string | null; imageUrl: string | null; isFeatured: boolean }
+export type GiftPageView = { content: GiftPageContent; occasions: GiftOccasion[] }
+
+export type GiftEnquiryKind = 'bulk' | 'customize'
+export type GiftEnquiryInput = {
+  kind: GiftEnquiryKind
+  fullName: string
+  email: string
+  phone: string
+  occasion?: string
+  quantity?: number
+  eventDate?: string
+  message: string
+}
+
+export type AdminGiftOccasion = GiftOccasion & { sortOrder: number; isActive: boolean; productCount: number }
+export type GiftOccasionInput = { name: string; slug?: string; tagline?: string | null; sortOrder?: number; isActive?: boolean; isFeatured?: boolean }
+export type AdminGiftProduct = { id: string; name: string; slug: string; category: string; thumbUrl: string | null; price: number; isActive: boolean; occasionIds: string[] }
+export type AdminGiftProductQuery = PageQuery & { search?: string; onlyGifts?: boolean }
+export type GiftEnquiry = Required<Omit<GiftEnquiryInput, 'occasion' | 'quantity' | 'eventDate'>> & {
+  id: string
+  occasion: string | null
+  quantity: number | null
+  eventDate: string | null
+  isResolved: boolean
+  createdAt: string
+}
+/** Page text as the admin edits it: image URLs are owned by the upload endpoints. */
+export type GiftPageContentInput = Omit<GiftPageContent, 'hero' | 'customize' | 'bulk'> & {
+  hero: Omit<GiftPageContent['hero'], 'imageUrl'>
+  customize: Omit<GiftPageContent['customize'], 'imageUrl'>
+  bulk: Omit<GiftPageContent['bulk'], 'imageUrl'>
 }

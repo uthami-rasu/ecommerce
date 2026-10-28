@@ -1,5 +1,5 @@
 import { http } from '../lib/http/apiClient'
-import type { CheckoutInput, MockCheckoutResult, MockOutcome, Order, PageQuery, Paginated, Payment, PaymentInitiation } from '../types/api'
+import type { CheckoutInput, MockCheckoutResult, MockOutcome, Order, PageQuery, Paginated, Payment, PaymentGateway, PaymentInitiation } from '../types/api'
 
 const orderPath = (orderNumber: string) => `/orders/${encodeURIComponent(orderNumber)}`
 
@@ -10,8 +10,9 @@ export const ordersRepository = {
   cancel: (orderNumber: string) => http.post<Order>(`${orderPath(orderNumber)}/cancel`),
 }
 
-/** Gateway-agnostic payment steps; the mock provider stands in for Razorpay. */
+/** Gateway-agnostic payment steps (Razorpay, or the mock provider in local/e2e runs). */
 export const paymentsRepository = {
+  gateway: () => http.get<PaymentGateway>('/payments/gateway'),
   initiate: (orderNumber: string) => http.post<PaymentInitiation>(`/payments/orders/${encodeURIComponent(orderNumber)}`),
   mockCheckout: (paymentId: string, outcome: MockOutcome) =>
     http.post<MockCheckoutResult>(`/payments/${paymentId}/mock-checkout`, { outcome }),

@@ -20,6 +20,7 @@ function named<P extends object, K extends string>(load: () => Promise<{ [key in
 const CategoryPage = named(() => import('./pages/CategoryPage'), 'CategoryPage')
 const ProductDetailPage = named(() => import('./pages/ProductDetailPage'), 'ProductDetailPage')
 const ContactPage = named(() => import('./pages/ContactPage'), 'ContactPage')
+const GiftsPage = named(() => import('./pages/GiftsPage'), 'GiftsPage')
 const WishlistPage = named(() => import('./pages/WishlistPage'), 'WishlistPage')
 const AuthPage = named(() => import('./pages/auth/AuthPage'), 'AuthPage')
 const AccountPage = named(() => import('./pages/account/AccountPage'), 'AccountPage')
@@ -31,7 +32,7 @@ const OrderDetailPage = named(() => import('./pages/orders/OrderDetailPage'), 'O
 const AdminApp = named(() => import('./pages/admin/AdminApp'), 'AdminApp')
 
 const PAGE_ROUTES = new Set([
-  'home', 'honey', 'shop', 'product', 'contact', 'cart', 'checkout', 'pay', 'order-complete', 'orders', 'wishlist',
+  'home', 'honey', 'shop', 'product', 'contact', 'gifts', 'return-gifts', 'cart', 'checkout', 'pay', 'order-complete', 'orders', 'wishlist',
   'account', 'my-account', 'admin', 'login', 'register', 'verify-email', 'forgot-password', 'reset-password',
 ])
 
@@ -55,6 +56,9 @@ function resolve(route: Route): Resolved {
       return second ? { page: <ProductDetailPage key={second} slug={second} /> } : { page: <CategoryPage /> }
     case 'contact':
       return { page: <ContactPage /> }
+    case 'gifts':
+    case 'return-gifts':
+      return { page: <GiftsPage /> }
     case 'cart':
       return { page: <CartPage /> }
     case 'checkout':

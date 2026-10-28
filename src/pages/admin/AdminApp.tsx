@@ -12,6 +12,7 @@ import { AdminCategoriesPage } from './AdminCategoriesPage'
 import { AdminCustomerDetailPage } from './AdminCustomerDetailPage'
 import { AdminCustomersPage } from './AdminCustomersPage'
 import { AdminDashboardPage } from './AdminDashboardPage'
+import { AdminGiftingPage } from './AdminGiftingPage'
 import { AdminOrderPage } from './AdminOrderPage'
 import { AdminOrdersPage } from './AdminOrdersPage'
 import { AdminProductsPage } from './AdminProductsPage'
@@ -30,6 +31,7 @@ function resolve(segments: string[]): { section: AdminSection; title: string; pa
   if (head === 'categories') return { section: 'categories', title: 'Categories', page: <AdminCategoriesPage /> }
   if (head === 'customers' && second && !rest.length) return { section: 'customers', title: 'Customer Details', page: <AdminCustomerDetailPage key={second} id={second} /> }
   if (head === 'customers') return { section: 'customers', title: 'Customers', page: <AdminCustomersPage /> }
+  if (head === 'gifting') return { section: 'gifting', title: 'Return Gifts', page: <AdminGiftingPage tab={second} /> }
   if (head === 'settings') return { section: 'settings', title: 'Settings', page: <AdminSettingsPage /> }
   return {
     section: 'dashboard',

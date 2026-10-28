@@ -148,7 +148,7 @@ export function Header() {
             )}
           </div>
 
-          <a className="nav-icon-link group" href="#trending">
+          <a className="nav-icon-link group" href="#gifts">
             <Sparkles size={15} strokeWidth={1.8} /><span>Gifting</span>
           </a>
           <a className="nav-icon-link group" href="#gallery">
@@ -248,7 +248,7 @@ export function Header() {
 
           <a
             className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-stone-700 hover:bg-stone-50 dark:text-stone-200 dark:hover:bg-stone-900"
-            href="#trending"
+            href="#gifts"
             onClick={() => setIsMenuOpen(false)}
           >
             <Sparkles size={17} /> Gifting

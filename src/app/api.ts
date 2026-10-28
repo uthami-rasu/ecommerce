@@ -8,7 +8,7 @@ import { toApiError, type ApiErrorShape } from '../lib/http/apiClient'
 export const api = createApi({
   reducerPath: 'api',
   baseQuery: fakeBaseQuery<ApiErrorShape>(),
-  tagTypes: ['Cart', 'Wishlist', 'Profile', 'Addresses', 'Orders', 'Order', 'Reviews', 'Product', 'Products', 'Categories', 'AdminOrders', 'AdminOrder', 'Dashboard', 'AdminProducts', 'AdminCategories', 'Settings', 'Customers'],
+  tagTypes: ['Cart', 'Wishlist', 'Profile', 'Addresses', 'Orders', 'Order', 'Reviews', 'Product', 'Products', 'Categories', 'AdminOrders', 'AdminOrder', 'Dashboard', 'AdminProducts', 'AdminCategories', 'Settings', 'Customers', 'GiftPage', 'GiftOccasions', 'GiftProducts', 'GiftEnquiries'],
   // Server data is cheap to refetch; keep unused results for a minute.
   keepUnusedDataFor: 60,
   refetchOnFocus: false,
