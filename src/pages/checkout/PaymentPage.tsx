@@ -167,7 +167,9 @@ function Gateway({ order, gateway, onFinished }: { order: Order; gateway: Paymen
           </span>
           <div>
             <p className="text-sm font-bold tracking-[0.18em]">BOSSCO</p>
-            <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[#e9cf9f]"><Lock size={10} aria-hidden /> Secure checkout</p>
+            <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[#e9cf9f]">
+              <Lock size={10} aria-hidden /> {isRazorpay ? 'Razorpay Secure Checkout' : 'Secure checkout'}
+            </p>
           </div>
         </div>
         <div className="mt-5 flex flex-wrap items-end justify-between gap-4">
@@ -236,7 +238,12 @@ function Gateway({ order, gateway, onFinished }: { order: Order; gateway: Paymen
           disabled={busy}
           className="mt-7 inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#173f32] px-6 text-base font-bold text-white shadow-[0_16px_32px_-14px_rgba(23,63,50,0.85)] transition hover:bg-[#1e5040] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#173f32] disabled:opacity-60 dark:bg-amber-300 dark:text-stone-900 dark:hover:bg-amber-200"
         >
-          <Lock size={17} aria-hidden /> {phase === 'opening' ? 'Complete payment in the Razorpay window…' : `Pay ${formatMoney(order.total)}`}
+          <Lock size={17} aria-hidden />{' '}
+          {phase === 'opening'
+            ? 'Complete payment in the Razorpay window…'
+            : isRazorpay
+              ? `Proceed to Pay with Razorpay · ${formatMoney(order.total)}`
+              : `Pay ${formatMoney(order.total)}`}
         </button>
         <div className="mt-4 flex flex-col items-center gap-3 text-center">
           {!isRazorpay && <button
@@ -248,7 +255,7 @@ function Gateway({ order, gateway, onFinished }: { order: Order; gateway: Paymen
             <AlertOctagon size={13} aria-hidden /> Simulate a declined payment
           </button>}
           <p className="flex items-center gap-1.5 text-xs text-stone-400">
-            <ShieldCheck size={14} aria-hidden /> {isRazorpay ? 'Secured by Razorpay · We never see your card or UPI details' : 'Encrypted · Razorpay-compatible mock gateway'}
+            <ShieldCheck size={14} aria-hidden /> {isRazorpay ? 'Secured by Razorpay · UPI, Cards, Netbanking & Wallets supported' : 'Encrypted · Razorpay-compatible mock gateway'}
           </p>
         </div>
       </form>
@@ -260,19 +267,38 @@ function Gateway({ order, gateway, onFinished }: { order: Order; gateway: Paymen
 
 function RazorpayMethods() {
   return (
-    <div className="mt-6 rounded-2xl bg-gradient-to-br from-[#173f32] to-[#0f2b22] p-5 text-white">
-      <p className="text-sm leading-relaxed text-white/80">
-        You’ll complete the payment in Razorpay’s secure window. Choose any method there:
+    <div className="mt-6 rounded-2xl border border-emerald-900/30 bg-gradient-to-br from-[#173f32] via-[#1a4738] to-[#0f2b22] p-5 text-white shadow-inner">
+      <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-3">
+        <div className="flex items-center gap-2.5">
+          <span className="flex size-7 items-center justify-center rounded-lg bg-[#0c2340] font-black italic tracking-tighter text-[#3395ff] shadow-sm">
+            R
+          </span>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider text-white">Razorpay Secure</p>
+            <p className="text-[10px] text-white/70">Official payment gateway</p>
+          </div>
+        </div>
+        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-400/20 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-200 ring-1 ring-emerald-400/30">
+          Instant & Encrypted
+        </span>
+      </div>
+
+      <p className="mt-3.5 text-xs text-white/80">
+        You will complete your payment in Razorpay’s official window. All methods accepted:
       </p>
-      <ul className="mt-4 grid grid-cols-2 gap-2 text-xs font-bold sm:grid-cols-4">
-        {([
-          ['UPI', Smartphone],
-          ['Cards', CreditCard],
-          ['Netbanking', Building2],
-          ['Wallets', Wallet],
-        ] as const).map(([label, Icon]) => (
-          <li key={label} className="flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2.5">
-            <Icon size={15} aria-hidden /> {label}
+
+      <ul className="mt-3.5 grid grid-cols-2 gap-2 text-xs font-medium sm:grid-cols-4">
+        {[
+          { label: 'UPI / QR', sub: 'GPay, PhonePe, Paytm', Icon: Smartphone },
+          { label: 'Cards', sub: 'Visa, Master, RuPay', Icon: CreditCard },
+          { label: 'Netbanking', sub: 'All Indian Banks', Icon: Building2 },
+          { label: 'Wallets', sub: 'Amazon Pay & more', Icon: Wallet },
+        ].map(({ label, sub, Icon }) => (
+          <li key={label} className="flex flex-col gap-1 rounded-xl bg-white/10 p-2.5 backdrop-blur-sm">
+            <span className="flex items-center gap-1.5 font-bold text-white">
+              <Icon size={14} className="text-[#e9cf9f]" aria-hidden /> {label}
+            </span>
+            <span className="text-[10px] text-white/60">{sub}</span>
           </li>
         ))}
       </ul>
