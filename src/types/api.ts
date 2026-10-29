@@ -442,7 +442,12 @@ export type PaymentInitiation = Payment & { checkout: Record<string, unknown> }
 export type MockCheckoutResult = { providerOrderId: string; providerPaymentId: string; signature: string }
 
 /** Which checkout the API is configured for (GET /payments/gateway). */
-export type PaymentGateway = { provider: 'razorpay' | 'mock'; testMode: boolean }
+export type PaymentGateway = {
+  provider: 'razorpay' | 'mock'
+  testMode: boolean
+  /** Methods enabled in admin Settings; absent on older APIs (= all). */
+  methods?: { upi: boolean; card: boolean; netbanking: boolean }
+}
 
 /** `checkout` payload of a Razorpay payment initiation. Contains only the public key id. */
 export type RazorpayCheckoutConfig = {

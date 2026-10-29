@@ -159,7 +159,7 @@ function OrderDetail({ order, live }: { order: Order; live: boolean }) {
             <dl className="mt-4 grid gap-2 border-t border-stone-200 pt-4 text-sm dark:border-stone-800">
               <div className="flex justify-between gap-4">
                 <dt className="text-stone-500 dark:text-stone-400">Status</dt>
-                <dd className="font-bold text-stone-800 dark:text-stone-100">{order.paymentStatus ? PAYMENT_STATUS_LABEL[order.paymentStatus] : 'Not paid'}</dd>
+                <dd className="font-bold text-stone-800 dark:text-stone-100">{order.paymentStatus ? PAYMENT_STATUS_LABEL[order.paymentStatus] : order.paidAt ? 'Paid' : 'Not paid'}</dd>
               </div>
               {order.paidAt && (
                 <>

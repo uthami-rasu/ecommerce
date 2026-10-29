@@ -128,6 +128,10 @@ export const adminApi = api.injectEndpoints({
     sendTestEmail: build.mutation<{ success: boolean; message: string }, string>({
       queryFn: (to) => run(adminRepository.testEmail(to)),
     }),
+    getAdminCustomerStats: build.query<{ total: number; newThisMonth: number; active: number; inactive: number; withOrders: number }, void>({
+      queryFn: () => run(adminRepository.customerStats()),
+      providesTags: ['Customers'],
+    }),
     getAdminCustomers: build.query<{ data: any[]; meta: { total: number; page: number; limit: number; totalPages: number } }, { search?: string; status?: string; page?: number; limit?: number }>({
       queryFn: (query) => run(adminRepository.customers(query)),
       providesTags: ['Customers'],
@@ -169,6 +173,7 @@ export const {
   useUploadFaviconMutation,
   useSendTestEmailMutation,
   useGetAdminCustomersQuery,
+  useGetAdminCustomerStatsQuery,
   useGetAdminCustomerQuery,
   useUpdateCustomerStatusMutation,
 } = adminApi

@@ -27,6 +27,7 @@ import { errorMessage } from '../../lib/http/apiClient'
 import { payOrder, payWithRazorpay } from '../../services/paymentService'
 import { CHECKOUT_DISMISSED } from '../../services/razorpayCheckout'
 import type { MockOutcome, Order, Payment, PaymentGateway } from '../../types/api'
+import { SHIPPING_METHOD_LABEL } from '../../constants/orderStatus'
 import { formatAddress, formatMoney, fullName } from '../../utils/format'
 import { navigate } from '../../utils/router'
 
@@ -132,7 +133,7 @@ function AmazonCheckoutView({
     setPhase('opening')
     setFailure(null)
     try {
-      await settle(await payWithRazorpay(order, () => setPhase('processing')))
+      await settle(await payWithRazorpay(order, () => setPhase('processing'), gateway.methods))
     } catch (err) {
       fail(err)
     }
@@ -167,7 +168,7 @@ function AmazonCheckoutView({
   const busy = phase === 'opening' || phase === 'processing' || phase === 'success'
 
   return (
-    <div className="relative">
+    <div className={`relative ${isRazorpay ? 'pb-24 lg:pb-0' : ''}`}>
       <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_370px] xl:grid-cols-[minmax(0,1fr)_390px]">
         {/* LEFT COLUMN: Amazon-style structured checkout steps */}
         <div className="space-y-6">
@@ -353,8 +354,8 @@ function AmazonCheckoutView({
                 </div>
               )}
 
-              {/* Action Button */}
-              <div className="mt-6 border-t border-stone-100 pt-5 dark:border-stone-800">
+              {/* Action Button (phones/tablets use the fixed bar at the bottom instead) */}
+              <div className={`mt-6 border-t border-stone-100 pt-5 dark:border-stone-800 ${isRazorpay ? 'hidden lg:block' : ''}`}>
                 <button
                   type="submit"
                   disabled={busy}
@@ -405,9 +406,11 @@ function AmazonCheckoutView({
             <div className="mt-4 flex items-center gap-3 rounded-xl bg-stone-50 p-3.5 text-xs text-stone-700 dark:bg-stone-800/60 dark:text-stone-300">
               <Truck size={18} className="flex-none text-[#173f32] dark:text-amber-300" aria-hidden />
               <div>
-                <span className="font-bold text-stone-900 dark:text-stone-100">Standard Delivery</span>
+                <span className="font-bold text-stone-900 dark:text-stone-100">
+                  {order.shippingMethod === 'pickup' ? 'Store pickup' : `${SHIPPING_METHOD_LABEL[order.shippingMethod]} delivery`}
+                </span>
                 <span className="mx-1.5 text-stone-400">·</span>
-                <span>Direct from harvest, vacuum packed for freshness</span>
+                <span>{order.shippingMethod === 'pickup' ? 'We’ll tell you when it’s ready to collect' : 'Packed fresh after you order'}</span>
               </div>
             </div>
 
@@ -450,7 +453,7 @@ function AmazonCheckoutView({
               type="button"
               onClick={() => submit()}
               disabled={busy}
-              className="w-full rounded-xl bg-[#ffc220] py-3.5 px-4 text-center text-sm font-bold text-stone-950 shadow-sm transition hover:bg-[#eab016] active:bg-[#d89e0b] focus-visible:outline-2 focus-visible:outline-[#ffc220] disabled:opacity-50"
+              className="hidden w-full rounded-xl bg-[#ffc220] py-3.5 px-4 lg:block text-center text-sm font-bold text-stone-950 shadow-sm transition hover:bg-[#eab016] active:bg-[#d89e0b] focus-visible:outline-2 focus-visible:outline-[#ffc220] disabled:opacity-50"
             >
               {phase === 'opening'
                 ? 'Opening Razorpay…'
@@ -458,11 +461,11 @@ function AmazonCheckoutView({
                   ? `Place Your Order and Pay`
                   : `Pay ${formatMoney(order.total)}`}
             </button>
-            <p className="mt-2 text-center text-[11px] leading-tight text-stone-500 dark:text-stone-400">
+            <p className="mt-2 hidden text-center text-[11px] leading-tight text-stone-500 lg:block dark:text-stone-400">
               By placing your order, you agree to Bossco's Terms of Use and Privacy Policy.
             </p>
 
-            <div className="my-5 border-t border-stone-200 dark:border-stone-800" />
+            <div className="my-5 hidden border-t border-stone-200 lg:block dark:border-stone-800" />
 
             <h3 className="text-base font-bold text-stone-900 dark:text-stone-100">Order Summary</h3>
 
@@ -528,6 +531,26 @@ function AmazonCheckoutView({
           </div>
         </aside>
       </div>
+
+      {/* Phones/tablets: one pay button that never scrolls away */}
+      {isRazorpay && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-stone-200 bg-white/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.25)] backdrop-blur lg:hidden dark:border-stone-800 dark:bg-stone-900/95">
+          <div className="mx-auto flex max-w-xl items-center gap-3">
+            <div className="min-w-0">
+              <p className="text-[11px] text-stone-500 dark:text-stone-400">Total</p>
+              <p className="text-lg font-extrabold tabular-nums text-stone-900 dark:text-stone-50">{formatMoney(order.total)}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => submit()}
+              disabled={busy}
+              className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-[#ffc220] px-4 text-sm font-bold text-stone-950 shadow-sm transition active:bg-[#d89e0b] disabled:opacity-50"
+            >
+              <Lock size={15} aria-hidden /> {phase === 'opening' ? 'Opening Razorpay…' : 'Place order & pay'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Processing overlay */}
       {(phase === 'processing' || phase === 'success') && <PaymentProcessing success={phase === 'success'} />}

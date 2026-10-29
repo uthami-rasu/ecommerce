@@ -47,6 +47,8 @@ export const adminRepository = {
   testEmail: (to: string) => http.post<{ success: boolean; message: string }>('/admin/settings/test-email', { to }),
   customers: (query: { search?: string; status?: string; page?: number; limit?: number } = {}) =>
     http.get<{ data: any[]; meta: { total: number; page: number; limit: number; totalPages: number } }>('/admin/customers', query),
+  customerStats: () =>
+    http.get<{ total: number; newThisMonth: number; active: number; inactive: number; withOrders: number }>('/admin/customers/stats'),
   customer: (id: string) => http.get<any>(`/admin/customers/${id}`),
   updateCustomerStatus: (id: string, isActive: boolean) =>
     http.patch<{ success: boolean; isActive: boolean }>(`/admin/customers/${id}/status`, { isActive }),

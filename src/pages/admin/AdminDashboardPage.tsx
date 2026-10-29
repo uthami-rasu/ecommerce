@@ -18,6 +18,7 @@ import { OrderStatusBadge } from '../../components/admin/StatusBadge'
 import { card } from '../../components/admin/styles'
 import { ErrorState, Skeleton } from '../../components/admin/ui'
 import { useGetAdminOrdersQuery, useGetDashboardQuery } from '../../features/admin/adminApi'
+import type { AdminOrderListItem } from '../../types/api'
 import { formatMoney } from '../../utils/format'
 import '../../styles/admin.css'
 
@@ -83,16 +84,21 @@ function StatTile({
 
 // ── Donut legend ─────────────────────────────────────────────────────────────
 
+/** Every order status falls in exactly one group, so the shares add up to 100%. */
 const STATUS_SEGMENTS = [
-  { key: 'delivered',   label: 'Delivered',   color: '#1f7a55' },
-  { key: 'processing',  label: 'Processing',  color: '#60a5fa' },
-  { key: 'paid',        label: 'Pending',     color: '#fbbf24' },
-  { key: 'cancelled',   label: 'Cancelled',   color: '#f87171' },
+  { key: 'new',       label: 'New (paid)',      statuses: ['paid'],                                         color: '#fbbf24' },
+  { key: 'progress',  label: 'In progress',     statuses: ['processing', 'packed', 'shipped', 'out_for_delivery'], color: '#60a5fa' },
+  { key: 'delivered', label: 'Delivered',       statuses: ['delivered'],                                    color: '#1f7a55' },
+  { key: 'unpaid',    label: 'Awaiting payment', statuses: ['pending_payment', 'payment_failed'],           color: '#d6d3d1' },
+  { key: 'cancelled', label: 'Cancelled',       statuses: ['cancelled'],                                    color: '#f87171' },
 ] as const
 
-function OrderDonut({ counts }: { counts: Partial<Record<string, number>> }) {
-  const total: number = Object.values(counts).reduce((s: number, v) => s + (v ?? 0), 0)
-  const segments = STATUS_SEGMENTS.map((s) => ({ label: s.label, value: counts[s.key] ?? 0, color: s.color }))
+function OrderDonut({ counts: byStatus }: { counts: Partial<Record<string, number>> }) {
+  const counts = Object.fromEntries(
+    STATUS_SEGMENTS.map((s) => [s.key, s.statuses.reduce((sum: number, status) => sum + (byStatus[status] ?? 0), 0)]),
+  ) as Record<(typeof STATUS_SEGMENTS)[number]['key'], number>
+  const total: number = Object.values(counts).reduce((s: number, v) => s + v, 0)
+  const segments = STATUS_SEGMENTS.map((s) => ({ label: s.label, value: counts[s.key], color: s.color }))
 
   return (
     <div className="flex flex-col items-center gap-5 p-5">
@@ -105,7 +111,7 @@ function OrderDonut({ counts }: { counts: Partial<Record<string, number>> }) {
       </div>
       <ul className="w-full space-y-2">
         {STATUS_SEGMENTS.map((s) => {
-          const count = counts[s.key] ?? 0
+          const count = counts[s.key]
           const pct = total > 0 ? Math.round((count / total) * 100) : 0
           return (
             <li key={s.key} className="flex items-center justify-between text-sm">
@@ -124,7 +130,7 @@ function OrderDonut({ counts }: { counts: Partial<Record<string, number>> }) {
 
 // ── Recent orders row ─────────────────────────────────────────────────────────
 
-function RecentOrderRow({ order }: { order: any }) {
+function RecentOrderRow({ order }: { order: AdminOrderListItem }) {
   return (
     <a
       href={`#admin/orders/${order.id}`}
@@ -161,14 +167,9 @@ function TopProductRow({ product, rank }: { product: TopProduct; rank: number })
         <p className="truncate text-sm font-medium text-stone-900 dark:text-stone-100">{product.productName}</p>
         <p className="text-[11px] text-stone-400 dark:text-stone-500">{product.unitsSold} units sold</p>
       </div>
-      <div className="text-right">
-        <p className="text-sm font-semibold tabular-nums text-stone-900 dark:text-stone-100">
-          {formatMoney(product.revenue)}
-        </p>
-        <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
-          +{product.unitsSold > 0 ? Math.min(99, Math.round((product.unitsSold / 5) * 10)) : 0}%
-        </p>
-      </div>
+      <p className="text-right text-sm font-semibold tabular-nums text-stone-900 dark:text-stone-100">
+        {formatMoney(product.revenue)}
+      </p>
     </div>
   )
 }
@@ -240,9 +241,9 @@ export function AdminDashboardPage() {
               icon={ShoppingCart}
             />
             <StatTile
-              label="Pending"
+              label="To confirm"
               value={awaiting}
-              sub="Requires attention"
+              sub="Paid, awaiting confirmation"
               icon={AlertCircle}
             />
             <StatTile

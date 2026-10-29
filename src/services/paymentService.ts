@@ -1,6 +1,6 @@
 import { ApiError } from '../lib/http/apiClient'
 import { paymentsRepository } from '../repositories/ordersRepository'
-import type { MockOutcome, Order, Payment, RazorpayCheckoutConfig } from '../types/api'
+import type { MockOutcome, Order, Payment, PaymentGateway, RazorpayCheckoutConfig } from '../types/api'
 import { fullName } from '../utils/format'
 import { openRazorpayCheckout } from './razorpayCheckout'
 
@@ -19,7 +19,7 @@ export async function payOrder(orderNumber: string, outcome: MockOutcome): Promi
  * Checkout, then has the API verify the result. `onAuthorized` fires once Razorpay
  * reports success and server verification starts.
  */
-export async function payWithRazorpay(order: Order, onAuthorized: () => void): Promise<Payment> {
+export async function payWithRazorpay(order: Order, onAuthorized: () => void, methods?: PaymentGateway['methods']): Promise<Payment> {
   const payment = await paymentsRepository.initiate(order.orderNumber)
   const checkout = payment.checkout as RazorpayCheckoutConfig
   if (checkout.provider !== 'razorpay') throw new ApiError({ status: 0, message: 'Payments are not configured for Razorpay.' })
@@ -31,6 +31,7 @@ export async function payWithRazorpay(order: Order, onAuthorized: () => void): P
     amount: checkout.amount,
     currency: checkout.currency,
     description: `Order ${order.orderNumber}`,
+    methods,
     // Razorpay only recognises the number without spaces, e.g. +919876543210.
     prefill: { name: fullName(address), email: order.contactEmail, contact: address.phone.replace(/[^\d+]/g, '') },
   })

@@ -63,9 +63,9 @@ export function RevenueLineChart({ data }: { data: Point[] }) {
   const labelEvery = filtered.length <= 7 ? 1 : filtered.length <= 14 ? 2 : 5
 
   const RANGES: { key: Range; label: string }[] = [
-    { key: 'month', label: 'This Month' },
+    { key: 'month', label: '30 days' },
     { key: 'today', label: 'Today' },
-    { key: 'week', label: 'Week' },
+    { key: 'week', label: '7 days' },
   ]
 
   return (

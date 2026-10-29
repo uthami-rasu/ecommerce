@@ -51,6 +51,8 @@ export type RazorpayCheckoutOptions = {
   currency: string
   description: string
   prefill: { name?: string; email?: string; contact?: string }
+  /** Payment methods to offer; omitted = Razorpay's defaults. */
+  methods?: { upi: boolean; card: boolean; netbanking: boolean }
 }
 
 /**
@@ -73,6 +75,7 @@ export async function openRazorpayCheckout(options: RazorpayCheckoutOptions): Pr
       name: 'Bossco Naturals',
       description: options.description,
       prefill: options.prefill,
+      ...(options.methods && { method: options.methods }),
       theme: { color: '#173f32' },
       handler: (response: RazorpaySuccess) => resolve(response),
       modal: {

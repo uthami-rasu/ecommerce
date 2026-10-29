@@ -401,6 +401,7 @@ export function AdminSettingsPage() {
               <Truck size={18} className="text-[#1f7a55]" />
               <h2 className="text-sm font-bold text-stone-900">Shipping & Logistics</h2>
             </div>
+            <p className="text-[11px] text-stone-500">Delivery charge and free-delivery threshold apply to every checkout (within 30 seconds of saving).</p>
 
             <div className="space-y-4 text-xs">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -445,6 +446,7 @@ export function AdminSettingsPage() {
                 <label className="block font-semibold text-stone-700 mb-1.5">
                   Delivery Regions
                 </label>
+                <p className="mb-2 text-[11px] font-medium text-amber-700">For your records — checkout does not restrict delivery by region yet.</p>
                 <div className="flex flex-wrap items-center gap-2">
                   {regions.map((reg) => (
                     <span
@@ -507,6 +509,7 @@ export function AdminSettingsPage() {
               <Tag size={18} className="text-[#1f7a55]" />
               <h2 className="text-sm font-bold text-stone-900">Tax Configuration</h2>
             </div>
+            <p className="text-[11px] font-medium text-amber-700">For your records — prices are charged exactly as entered on each product; no tax is added at checkout.</p>
 
             <div className="space-y-4 text-xs">
               <div className="flex items-center justify-between">
@@ -596,6 +599,7 @@ export function AdminSettingsPage() {
               <Store size={18} className="text-[#1f7a55]" />
               <h2 className="text-sm font-bold text-stone-900">Order Settings</h2>
             </div>
+            <p className="text-[11px] text-stone-500">Minimum and maximum order values are checked at checkout (0 = no limit). Cash on delivery is not offered.</p>
 
             <div className="space-y-4 text-xs">
               <div className="grid grid-cols-2 gap-4">
@@ -620,30 +624,11 @@ export function AdminSettingsPage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-semibold text-stone-800">Allow COD</p>
-                  <p className="text-[11px] text-stone-400">Cash on delivery available</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setAllowCod(!allowCod)}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    allowCod ? 'bg-[#1f7a55]' : 'bg-stone-300'
-                  }`}
-                >
-                  <span
-                    className={`pointer-events-none inline-block size-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                      allowCod ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
-              </div>
-
               <div>
                 <label className="block font-semibold text-stone-700 mb-1">
                   Cancellation Window
                 </label>
+                <p className="mb-1 text-[11px] font-medium text-amber-700">Not enforced yet — customers can cancel until the order is paid.</p>
                 <input
                   type="text"
                   value={cancellationWindow}
@@ -660,6 +645,7 @@ export function AdminSettingsPage() {
               <CreditCard size={18} className="text-[#1f7a55]" />
               <h2 className="text-sm font-bold text-stone-900">Payment Methods</h2>
             </div>
+            <p className="text-[11px] text-stone-500">Switched-off methods are hidden in Razorpay Checkout.</p>
 
             <div className="space-y-3 text-xs">
               <div className="flex items-center justify-between rounded-xl border border-stone-100 p-3">
@@ -713,22 +699,6 @@ export function AdminSettingsPage() {
                 </button>
               </div>
 
-              <div className="flex items-center justify-between rounded-xl border border-stone-100 p-3">
-                <span className="font-semibold text-stone-800">COD</span>
-                <button
-                  type="button"
-                  onClick={() => setCodEnabled(!codEnabled)}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    codEnabled ? 'bg-[#1f7a55]' : 'bg-stone-300'
-                  }`}
-                >
-                  <span
-                    className={`pointer-events-none inline-block size-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                      codEnabled ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
-              </div>
             </div>
           </div>
         </div>
