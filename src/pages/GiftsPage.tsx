@@ -7,7 +7,6 @@ import {
   Loader2,
   MessageCircle,
   RotateCcw,
-  SlidersHorizontal,
   X,
 } from 'lucide-react'
 import { Footer } from '../components/layout/Footer'
@@ -37,7 +36,6 @@ import ivorySignature from '../assets/images/gifts/ivory-signature.webp'
 import royalCrimson from '../assets/images/gifts/royal-crimson.webp'
 import onyxSelectionWide from '../assets/images/gifts/onyx-selection-wide.webp'
 import momentWeddings from '../assets/images/gifts/moment-weddings.webp'
-import momentCorporate from '../assets/images/gifts/moment-corporate.webp'
 import momentCorporateDinner from '../assets/images/gifts/moment-corporate-dinner.webp'
 import momentFestive from '../assets/images/gifts/moment-festive.webp'
 import momentEngagement from '../assets/images/gifts/moment-engagement.webp'
@@ -488,7 +486,6 @@ function CelebrateMomentsSection({
               <img
                 src={momentWeddings}
                 alt="Weddings - Elegance Redefined"
-                loading="lazy"
                 className="size-full object-cover transition duration-700 group-hover:scale-105"
               />
             </button>
@@ -504,7 +501,6 @@ function CelebrateMomentsSection({
               <img
                 src={momentCorporateDinner}
                 alt="Corporate - Legacy Building"
-                loading="lazy"
                 className="size-full object-cover transition duration-700 group-hover:scale-105"
               />
               <div className="absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-black/85 via-black/35 to-transparent">
@@ -524,7 +520,6 @@ function CelebrateMomentsSection({
               <img
                 src={momentFestive}
                 alt="Festive - Cultural Grace"
-                loading="lazy"
                 className="size-full object-cover transition duration-700 group-hover:scale-105"
               />
             </button>
@@ -537,7 +532,6 @@ function CelebrateMomentsSection({
               <img
                 src={momentEngagement}
                 alt="Engagement - New Beginnings"
-                loading="lazy"
                 className="size-full object-cover transition duration-700 group-hover:scale-105"
               />
             </button>
@@ -753,25 +747,37 @@ function YourVisionSection({ occasions }: { occasions: GiftOccasion[] }) {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-semibold uppercase tracking-wider text-stone-600">Occasion</label>
-                    <select
-                      value={occasion}
-                      onChange={(e) => setOccasion(e.target.value)}
-                      className="mt-1.5 w-full border-b border-stone-300 bg-transparent py-2 text-sm text-stone-900 focus:border-stone-900 focus:outline-none"
-                    >
-                      {occasions.map((item) => (
-                        <option key={item.id} value={item.name}>
-                          {item.name}
-                        </option>
-                      ))}
-                      <option value="Other">Other Bespoke Event</option>
-                    </select>
+                    <label className="block text-[11px] font-semibold uppercase tracking-wider text-stone-600">Estimated Quantity</label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={quantity}
+                      onChange={(e) => setQuantity(e.target.value)}
+                      placeholder="e.g. 50"
+                      className="mt-1.5 w-full border-b border-stone-300 bg-transparent py-2 text-sm text-stone-900 placeholder:text-stone-400 focus:border-stone-900 focus:outline-none"
+                    />
                   </div>
                 </div>
 
                 <div>
+                  <label className="block text-[11px] font-semibold uppercase tracking-wider text-stone-600">Occasion</label>
+                  <select
+                    value={occasion}
+                    onChange={(e) => setOccasion(e.target.value)}
+                    className="mt-1.5 w-full border-b border-stone-300 bg-transparent py-2 text-sm text-stone-900 focus:border-stone-900 focus:outline-none"
+                  >
+                    {occasions.map((item) => (
+                      <option key={item.id} value={item.name}>
+                        {item.name}
+                      </option>
+                    ))}
+                    <option value="Other">Other Bespoke Event</option>
+                  </select>
+                </div>
+
+                <div>
                   <label className="block text-[11px] font-semibold uppercase tracking-wider text-stone-600">
-                    Estimated Quantity & Specific Preferences
+                    Specific Preferences & Requirements
                   </label>
                   <textarea
                     rows={3}
