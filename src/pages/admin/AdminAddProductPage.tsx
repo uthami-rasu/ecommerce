@@ -1,8 +1,5 @@
 import {
-  Bell,
   Bold,
-  Calendar,
-  Check,
   ChevronDown,
   Image as ImageIcon,
   Info,
@@ -10,18 +7,17 @@ import {
   Link2,
   List,
   ListOrdered,
-  Package,
   Plus,
   RotateCw,
   Save,
   Sliders,
-  Tag,
   Trash2,
-  Warehouse,
-  X,
 } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
+import { VariantsEditor } from '../../components/admin/VariantsEditor'
+import { emptyVariant, toVariantInput, validateVariants, type VariantRow } from '../../components/admin/variants'
+import { errorMessage } from '../../lib/http/apiClient'
 import {
   useCreateAdminProductMutation,
   useGetAdminCategoriesQuery,
@@ -31,9 +27,6 @@ import { card } from '../../components/admin/styles'
 import { navigate } from '../../utils/router'
 import '../../styles/admin.css'
 
-import almondImg from '../../assets/images/unsplash-almond.webp'
-import cashewImg from '../../assets/images/unsplash-cashew.webp'
-import nutMarketImg from '../../assets/images/unsplash-nut-market.webp'
 
 export function AdminAddProductPage() {
   const { data: categories = [] } = useGetAdminCategoriesQuery()
@@ -41,57 +34,25 @@ export function AdminAddProductPage() {
   const [uploadImage] = useUploadProductImageMutation()
 
   // Form states
-  const [name, setName] = useState('Premium Roasted Almonds - Lightly Salted')
+  const [name, setName] = useState('')
   const [categoryId, setCategoryId] = useState('')
-  const [sku, setSku] = useState('NH-ALM-001')
-  const [shortDesc, setShortDesc] = useState('Brief overview for product listings...')
-  const [fullDesc, setFullDesc] = useState('Write detailed product benefits, origin details, etc.')
+  const [sku, setSku] = useState('')
+  const [shortDesc, setShortDesc] = useState('')
+  const [fullDesc, setFullDesc] = useState('')
 
   // Images state
-  const [mainImageUrl, setMainImageUrl] = useState<string>(almondImg)
+  const [mainImageUrl, setMainImageUrl] = useState<string>('')
   const [mainFile, setMainFile] = useState<File | null>(null)
-  const [additionalImages, setAdditionalImages] = useState<string[]>([cashewImg, nutMarketImg])
+  const [additionalFiles, setAdditionalFiles] = useState<Array<{ file: File; url: string }>>([])
 
-  // Weight & Packaging
-  const [basePackSize, setBasePackSize] = useState('250')
-  const [unit, setUnit] = useState('Grams (g)')
-  const [variants, setVariants] = useState<string[]>(['100g', '250g', '500g'])
-  const [newVariantInput, setNewVariantInput] = useState('')
-  const [showAddVariant, setShowAddVariant] = useState(false)
-
-  // Pricing
-  const [mrp, setMrp] = useState('25.00')
-  const [sellingPrice, setSellingPrice] = useState('19.99')
-  const [discount, setDiscount] = useState('20')
-  const [taxRate, setTaxRate] = useState('5% GST')
-
-  // Calculated final price (approx.)
-  const numericPrice = parseFloat(sellingPrice) || 0
-  const taxMultiplier = taxRate.includes('18%') ? 0.18 : taxRate.includes('12%') ? 0.12 : taxRate.includes('5%') ? 0.05 : 0
-  const finalPrice = (numericPrice + numericPrice * taxMultiplier).toFixed(2)
-
-  // Inventory
-  const [stockQuantity, setStockQuantity] = useState('150')
-  const [lowStockAlert, setLowStockAlert] = useState('20')
-  const [inStock, setInStock] = useState(true)
+  // Sizes / packs, each with its own price, MRP and stock
+  const [variantRows, setVariantRows] = useState<VariantRow[]>([emptyVariant('250g')])
 
   // Product Settings
   const [customerFavorites, setCustomerFavorites] = useState(false)
   const [bestSellerTag, setBestSellerTag] = useState(true)
   const [trendingProducts, setTrendingProducts] = useState(true)
   const [publishStatus, setPublishStatus] = useState(true)
-
-  const handleRemoveVariant = (index: number) => {
-    setVariants((prev) => prev.filter((_, i) => i !== index))
-  }
-
-  const handleAddVariant = () => {
-    if (newVariantInput.trim() && !variants.includes(newVariantInput.trim())) {
-      setVariants((prev) => [...prev, newVariantInput.trim()])
-      setNewVariantInput('')
-      setShowAddVariant(false)
-    }
-  }
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -104,10 +65,8 @@ export function AdminAddProductPage() {
 
   const handleAddAdditionalView = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
-    if (file) {
-      const url = URL.createObjectURL(file)
-      setAdditionalImages((prev) => [...prev, url])
-    }
+    if (file) setAdditionalFiles((prev) => [...prev, { file, url: URL.createObjectURL(file) }])
+    e.target.value = ''
   }
 
   const handleSubmit = async (e?: FormEvent) => {
@@ -122,30 +81,19 @@ export function AdminAddProductPage() {
       toast.error('Please select a category')
       return
     }
+    const variantProblem = validateVariants(variantRows)
+    if (variantProblem) {
+      toast.error(variantProblem)
+      return
+    }
 
     try {
-      // Build variants for backend
-      const variantList = variants.length
-        ? variants.map((v, i) => ({
-            label: v,
-            sku: `${sku || 'SKU'}-${v.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()}`,
-            price: numericPrice,
-            compareAtPrice: parseFloat(mrp) || null,
-            stock: parseInt(stockQuantity, 10) || 10,
-            sortOrder: i,
-            isActive: inStock,
-          }))
-        : [
-            {
-              label: `${basePackSize}${unit.split(' ')[0]}`,
-              sku: sku || 'SKU-BASE',
-              price: numericPrice,
-              compareAtPrice: parseFloat(mrp) || null,
-              stock: parseInt(stockQuantity, 10) || 10,
-              sortOrder: 0,
-              isActive: inStock,
-            },
-          ]
+      const prefix = sku.trim().toUpperCase().replace(/[^A-Z0-9-]/g, '')
+      const variantList = variantRows.map((row, index) => {
+        const input = toVariantInput(row, index)
+        const suffix = input.label.toUpperCase().replace(/[^A-Z0-9]/g, '')
+        return prefix && suffix ? { ...input, sku: `${prefix}-${suffix}`.slice(0, 64) } : input
+      })
 
       const payload = {
         name: name.trim(),
@@ -162,18 +110,22 @@ export function AdminAddProductPage() {
       const res = await createProduct(payload).unwrap()
       const createdId = res?.id || (res?.data && res.data.id)
 
-      if (createdId && mainFile) {
+      // Main photo first (it becomes the listing image), then the extra views in order.
+      const photos = [mainFile, ...additionalFiles.map((item) => item.file)].filter((file): file is File => Boolean(file))
+      let failedUploads = 0
+      for (const [index, file] of photos.entries()) {
         const formData = new FormData()
-        formData.append('image', mainFile)
-        formData.append('alt', name)
-        await uploadImage({ id: createdId, formData }).unwrap().catch(() => null)
+        formData.append('image', file)
+        formData.append('alt', name.trim())
+        formData.append('sortOrder', String(index))
+        if (createdId) await uploadImage({ id: createdId, formData }).unwrap().catch(() => { failedUploads += 1 })
       }
+      if (failedUploads) toast.warning(`${failedUploads} photo(s) could not be uploaded — add them from Edit product.`)
 
       toast.success(`Product "${name}" saved and published successfully!`)
       navigate('admin/products')
-    } catch (err: any) {
-      const msg = err?.data?.message || err?.message || 'Failed to create product'
-      toast.error(msg)
+    } catch (err) {
+      toast.error(errorMessage(err, 'Failed to create product'))
     }
   }
 
@@ -185,20 +137,6 @@ export function AdminAddProductPage() {
           <h1 className="font-display text-2xl font-bold tracking-tight text-stone-900 dark:text-stone-50 sm:text-3xl">
             Add New Product
           </h1>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            className="relative grid size-9 place-items-center rounded-xl bg-white text-stone-600 shadow-sm ring-1 ring-stone-200/80 hover:bg-stone-50 transition-colors dark:bg-stone-900 dark:text-stone-300 dark:ring-stone-800"
-            aria-label="Notifications"
-          >
-            <Bell size={16} />
-            <span className="absolute right-2 top-2 size-2 rounded-full bg-rose-500" />
-          </button>
-          <div className="flex items-center gap-2 rounded-xl bg-white px-3.5 py-2 text-xs font-medium text-stone-600 shadow-sm ring-1 ring-stone-200/80 dark:bg-stone-900 dark:text-stone-300 dark:ring-stone-800">
-            <Calendar size={14} className="text-stone-400" />
-            <span>Oct 24, 2023</span>
-          </div>
         </div>
       </div>
 
@@ -428,12 +366,20 @@ export function AdminAddProductPage() {
                   ADDITIONAL VIEWS
                 </p>
                 <div className="flex flex-wrap items-center gap-2">
-                  {additionalImages.map((img, idx) => (
+                  {additionalFiles.map((item, idx) => (
                     <div
-                      key={idx}
+                      key={item.url}
                       className="relative size-14 overflow-hidden rounded-xl bg-stone-100 ring-1 ring-stone-200/70"
                     >
-                      <img src={img} alt={`View ${idx + 1}`} className="size-full object-cover" />
+                      <img src={item.url} alt={`View ${idx + 1}`} className="size-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setAdditionalFiles((prev) => prev.filter((other) => other.url !== item.url))}
+                        aria-label={`Remove view ${idx + 1}`}
+                        className="absolute right-0.5 top-0.5 grid size-5 place-items-center rounded-full bg-white/90 text-rose-600 shadow"
+                      >
+                        <Trash2 size={10} />
+                      </button>
                     </div>
                   ))}
                   <label className="cursor-pointer grid size-14 place-items-center rounded-xl border-2 border-dashed border-indigo-200 text-stone-400 hover:border-indigo-400 hover:text-indigo-600 transition-colors">
@@ -449,248 +395,13 @@ export function AdminAddProductPage() {
               </div>
             </div>
 
-            {/* Weight & Packaging Card */}
-            <div className={`${card} p-5 space-y-4`}>
-              <div className="flex items-center gap-2 border-b border-stone-100 pb-3 dark:border-stone-800">
-                <span className="grid size-7 place-items-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
-                  <Package size={16} />
-                </span>
-                <h2 className="text-sm font-semibold text-stone-800 dark:text-stone-100">
-                  Weight & Packaging
-                </h2>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-1">
-                    Base Pack Size
-                  </label>
-                  <input
-                    type="text"
-                    value={basePackSize}
-                    onChange={(e) => setBasePackSize(e.target.value)}
-                    className="w-full rounded-xl border-0 bg-stone-50 py-2 px-3 text-sm text-stone-800 ring-1 ring-stone-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#24412a]/50 dark:bg-stone-800 dark:text-stone-100 dark:ring-stone-700"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-1">
-                    Unit
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={unit}
-                      onChange={(e) => setUnit(e.target.value)}
-                      className="w-full appearance-none rounded-xl border-0 bg-stone-100/80 py-2 pl-3 pr-7 text-sm text-stone-700 ring-1 ring-stone-200 focus:bg-white focus:outline-none dark:bg-stone-800 dark:text-stone-200 dark:ring-stone-700"
-                    >
-                      <option value="Grams (g)">Grams (g)</option>
-                      <option value="Kilograms (kg)">Kilograms (kg)</option>
-                      <option value="Milliliters (ml)">Milliliters (ml)</option>
-                      <option value="Liters (l)">Liters (l)</option>
-                      <option value="Pieces">Pieces</option>
-                    </select>
-                    <ChevronDown size={14} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400" />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-2">
-                  Available Variants
-                </label>
-                <div className="flex flex-wrap items-center gap-2">
-                  {variants.map((v, i) => (
-                    <span
-                      key={v}
-                      className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50/80 px-3 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200/60 dark:bg-emerald-950/40 dark:text-emerald-300 dark:ring-emerald-900/60"
-                    >
-                      {v}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveVariant(i)}
-                        className="text-emerald-600 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-200"
-                      >
-                        <X size={12} />
-                      </button>
-                    </span>
-                  ))}
-                  {showAddVariant ? (
-                    <div className="flex items-center gap-1">
-                      <input
-                        type="text"
-                        autoFocus
-                        placeholder="e.g. 1kg"
-                        value={newVariantInput}
-                        onChange={(e) => setNewVariantInput(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddVariant())}
-                        className="w-20 rounded-full border-0 bg-white py-0.5 px-2.5 text-xs ring-1 ring-emerald-400 focus:outline-none"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleAddVariant}
-                        className="grid size-6 place-items-center rounded-full bg-emerald-600 text-white"
-                      >
-                        <Check size={12} />
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setShowAddVariant(true)}
-                      className="inline-flex items-center gap-1 rounded-full border border-dashed border-stone-300 px-3 py-1 text-xs font-medium text-stone-600 hover:bg-stone-50 transition-colors dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800"
-                    >
-                      <Plus size={12} /> Add Variant
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 
-        {/* Bottom Row: Pricing, Inventory, Product Settings (3 Columns) */}
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-          {/* Card: Pricing */}
-          <div className={`${card} p-5 space-y-4`}>
-            <div className="flex items-center gap-2 border-b border-stone-100 pb-3 dark:border-stone-800">
-              <span className="grid size-7 place-items-center rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400">
-                <Tag size={16} />
-              </span>
-              <h2 className="text-sm font-semibold text-stone-800 dark:text-stone-100">
-                Pricing
-              </h2>
-            </div>
+        <VariantsEditor rows={variantRows} onChange={setVariantRows} />
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[11px] font-semibold text-stone-600 dark:text-stone-400 mb-1">
-                  MRP
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-stone-400">$</span>
-                  <input
-                    type="text"
-                    value={mrp}
-                    onChange={(e) => setMrp(e.target.value)}
-                    className="w-full rounded-xl border-0 bg-stone-50 py-2 pl-7 pr-3 text-sm font-medium text-stone-800 ring-1 ring-stone-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#24412a]/50 dark:bg-stone-800 dark:text-stone-100 dark:ring-stone-700"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-[11px] font-semibold text-stone-600 dark:text-stone-400 mb-1">
-                  SELLING PRICE
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-stone-400">$</span>
-                  <input
-                    type="text"
-                    value={sellingPrice}
-                    onChange={(e) => setSellingPrice(e.target.value)}
-                    className="w-full rounded-xl border-0 bg-stone-50 py-2 pl-7 pr-3 text-sm font-medium text-stone-800 ring-1 ring-stone-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#24412a]/50 dark:bg-stone-800 dark:text-stone-100 dark:ring-stone-700"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[11px] font-semibold text-stone-600 dark:text-stone-400 mb-1">
-                  DISCOUNT (%)
-                </label>
-                <input
-                  type="text"
-                  value={discount}
-                  onChange={(e) => setDiscount(e.target.value)}
-                  className="w-full rounded-xl border-0 bg-stone-50 py-2 px-3 text-sm font-medium text-stone-800 ring-1 ring-stone-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#24412a]/50 dark:bg-stone-800 dark:text-stone-100 dark:ring-stone-700"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] font-semibold text-stone-600 dark:text-stone-400 mb-1">
-                  TAX (GST)
-                </label>
-                <select
-                  value={taxRate}
-                  onChange={(e) => setTaxRate(e.target.value)}
-                  className="w-full rounded-xl border-0 bg-stone-100/80 py-2 px-3 text-sm font-medium text-stone-700 ring-1 ring-stone-200 focus:bg-white focus:outline-none dark:bg-stone-800 dark:text-stone-200 dark:ring-stone-700"
-                >
-                  <option value="0% GST">0% GST</option>
-                  <option value="5% GST">5% GST</option>
-                  <option value="12% GST">12% GST</option>
-                  <option value="18% GST">18% GST</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Final Price approx container */}
-            <div className="flex items-center justify-between rounded-xl bg-emerald-50/60 p-3 ring-1 ring-emerald-200/60 dark:bg-emerald-950/20 dark:ring-emerald-900/60">
-              <span className="text-xs font-semibold text-stone-700 dark:text-stone-300">
-                Final Price (approx.)
-              </span>
-              <span className="text-lg font-bold text-stone-900 dark:text-stone-100">
-                ${finalPrice}
-              </span>
-            </div>
-          </div>
-
-          {/* Card: Inventory */}
-          <div className={`${card} p-5 space-y-4`}>
-            <div className="flex items-center gap-2 border-b border-stone-100 pb-3 dark:border-stone-800">
-              <span className="grid size-7 place-items-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400">
-                <Warehouse size={16} />
-              </span>
-              <h2 className="text-sm font-semibold text-stone-800 dark:text-stone-100">
-                Inventory
-              </h2>
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-semibold text-stone-600 dark:text-stone-400 mb-1">
-                STOCK QUANTITY
-              </label>
-              <input
-                type="text"
-                value={stockQuantity}
-                onChange={(e) => setStockQuantity(e.target.value)}
-                className="w-full rounded-xl border-0 bg-stone-50 py-2 px-3 text-sm font-medium text-stone-800 ring-1 ring-stone-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#24412a]/50 dark:bg-stone-800 dark:text-stone-100 dark:ring-stone-700"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-semibold text-stone-600 dark:text-stone-400 mb-1">
-                LOW STOCK ALERT
-              </label>
-              <input
-                type="text"
-                value={lowStockAlert}
-                onChange={(e) => setLowStockAlert(e.target.value)}
-                className="w-full rounded-xl border-0 bg-stone-50 py-2 px-3 text-sm font-medium text-stone-800 ring-1 ring-stone-200 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#24412a]/50 dark:bg-stone-800 dark:text-stone-100 dark:ring-stone-700"
-              />
-            </div>
-
-            <div className="flex items-center justify-between pt-2">
-              <span className="text-xs font-semibold text-stone-700 dark:text-stone-300">
-                Stock Status
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setInStock(!inStock)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    inStock ? 'bg-[#24412a]' : 'bg-stone-300 dark:bg-stone-700'
-                  }`}
-                >
-                  <span
-                    className={`inline-block size-4 transform rounded-full bg-white transition-transform ${
-                      inStock ? 'translate-x-6' : 'translate-x-1'
-                    }`}
-                  />
-                </button>
-                <span className="text-xs font-medium text-stone-700 dark:text-stone-300">
-                  {inStock ? 'In Stock' : 'Out of Stock'}
-                </span>
-              </div>
-            </div>
-          </div>
-
+        {/* Product Settings */}
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           {/* Card: Product Settings */}
           <div className={`${card} p-5 space-y-4`}>
             <div className="flex items-center gap-2 border-b border-stone-100 pb-3 dark:border-stone-800">

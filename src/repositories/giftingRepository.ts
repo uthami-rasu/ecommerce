@@ -3,6 +3,9 @@ import type {
   AdminGiftOccasion,
   AdminGiftProduct,
   AdminGiftProductQuery,
+  GiftDesign,
+  GiftDesignInput,
+  GiftDesignSlot,
   GiftEnquiry,
   GiftEnquiryInput,
   GiftImageSlot,
@@ -20,6 +23,10 @@ export const giftingRepository = {
 }
 
 export const adminGiftingRepository = {
+  design: () => http.get<GiftDesign>('/admin/gifting/design'),
+  updateDesign: (input: GiftDesignInput) => http.put<GiftDesign>('/admin/gifting/design', input),
+  uploadDesignImage: (slot: GiftDesignSlot, formData: FormData) => http.post<GiftDesign>(`/admin/gifting/design/images/${slot}`, formData),
+  removeDesignImage: (slot: GiftDesignSlot) => http.delete<GiftDesign>(`/admin/gifting/design/images/${slot}`),
   content: () => http.get<GiftPageContent>('/admin/gifting/page'),
   updateContent: (input: GiftPageContentInput) => http.put<GiftPageContent>('/admin/gifting/page', input),
   uploadImage: (slot: GiftImageSlot, formData: FormData) => http.post<GiftPageContent>(`/admin/gifting/page/images/${slot}`, formData),

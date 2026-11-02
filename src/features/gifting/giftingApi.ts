@@ -4,6 +4,9 @@ import type {
   AdminGiftOccasion,
   AdminGiftProduct,
   AdminGiftProductQuery,
+  GiftDesign,
+  GiftDesignInput,
+  GiftDesignSlot,
   GiftEnquiry,
   GiftEnquiryInput,
   GiftImageSlot,
@@ -28,6 +31,24 @@ export const giftingApi = api.injectEndpoints({
     createGiftEnquiry: build.mutation<{ received: true; reference: string }, GiftEnquiryInput>({
       queryFn: (input) => run(giftingRepository.createEnquiry(input)),
       invalidatesTags: ['GiftEnquiries'],
+    }),
+
+    // ── Admin: landing page design ──
+    getAdminGiftDesign: build.query<GiftDesign, void>({
+      queryFn: () => run(adminGiftingRepository.design()),
+      providesTags: ['GiftPage'],
+    }),
+    updateAdminGiftDesign: build.mutation<GiftDesign, GiftDesignInput>({
+      queryFn: (input) => run(adminGiftingRepository.updateDesign(input)),
+      invalidatesTags: [...storefront],
+    }),
+    uploadGiftDesignImage: build.mutation<GiftDesign, { slot: GiftDesignSlot; formData: FormData }>({
+      queryFn: ({ slot, formData }) => run(adminGiftingRepository.uploadDesignImage(slot, formData)),
+      invalidatesTags: ['GiftPage'],
+    }),
+    removeGiftDesignImage: build.mutation<GiftDesign, GiftDesignSlot>({
+      queryFn: (slot) => run(adminGiftingRepository.removeDesignImage(slot)),
+      invalidatesTags: ['GiftPage'],
     }),
 
     // ── Admin: page content ──
@@ -94,6 +115,10 @@ export const giftingApi = api.injectEndpoints({
 
 export const {
   useGetGiftPageQuery,
+  useGetAdminGiftDesignQuery,
+  useUpdateAdminGiftDesignMutation,
+  useUploadGiftDesignImageMutation,
+  useRemoveGiftDesignImageMutation,
   useCreateGiftEnquiryMutation,
   useGetAdminGiftContentQuery,
   useUpdateAdminGiftContentMutation,

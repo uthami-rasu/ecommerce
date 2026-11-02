@@ -59,11 +59,6 @@ export function AdminSettingsPage() {
   const [allowCod, setAllowCod] = useState(true)
   const [cancellationWindow, setCancellationWindow] = useState('Up to 30 minutes after order')
 
-  // Payment Methods
-  const [upiEnabled, setUpiEnabled] = useState(true)
-  const [cardEnabled, setCardEnabled] = useState(true)
-  const [netBankingEnabled, setNetBankingEnabled] = useState(true)
-  const [codEnabled, setCodEnabled] = useState(true)
 
   // Populate from server settings when loaded
   useEffect(() => {
@@ -95,12 +90,6 @@ export function AdminSettingsPage() {
         setMaxOrderVal(String(serverSettings.maxOrderValue))
       if (serverSettings.allowCod !== undefined) setAllowCod(serverSettings.allowCod)
 
-      if (serverSettings.paymentMethods) {
-        setUpiEnabled(serverSettings.paymentMethods.upi)
-        setCardEnabled(serverSettings.paymentMethods.card)
-        setNetBankingEnabled(serverSettings.paymentMethods.netBanking)
-        setCodEnabled(serverSettings.paymentMethods.cod)
-      }
     }
   }, [serverSettings])
 
@@ -137,12 +126,6 @@ export function AdminSettingsPage() {
         minOrderValue: parseFloat(minOrderVal) || 0,
         maxOrderValue: parseFloat(maxOrderVal) || 0,
         allowCod,
-        paymentMethods: {
-          upi: upiEnabled,
-          card: cardEnabled,
-          netBanking: netBankingEnabled,
-          cod: codEnabled,
-        },
       }).unwrap()
 
       toast.success('Store settings saved successfully!')
@@ -639,67 +622,16 @@ export function AdminSettingsPage() {
             </div>
           </div>
 
-          {/* Payment Methods Card */}
-          <div className="rounded-2xl border border-stone-200/80 bg-white p-6 shadow-sm space-y-4">
+          {/* Payments Card (informational: all methods come from Razorpay Checkout) */}
+          <div className="rounded-2xl border border-stone-200/80 bg-white p-6 shadow-sm space-y-3">
             <div className="border-b border-stone-100 pb-3 flex items-center gap-2">
               <CreditCard size={18} className="text-[#1f7a55]" />
-              <h2 className="text-sm font-bold text-stone-900">Payment Methods</h2>
+              <h2 className="text-sm font-bold text-stone-900">Payments</h2>
             </div>
-            <p className="text-[11px] text-stone-500">Switched-off methods are hidden in Razorpay Checkout.</p>
-
-            <div className="space-y-3 text-xs">
-              <div className="flex items-center justify-between rounded-xl border border-stone-100 p-3">
-                <span className="font-semibold text-stone-800">UPI Payments</span>
-                <button
-                  type="button"
-                  onClick={() => setUpiEnabled(!upiEnabled)}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    upiEnabled ? 'bg-[#1f7a55]' : 'bg-stone-300'
-                  }`}
-                >
-                  <span
-                    className={`pointer-events-none inline-block size-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                      upiEnabled ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
-              </div>
-
-              <div className="flex items-center justify-between rounded-xl border border-stone-100 p-3">
-                <span className="font-semibold text-stone-800">Debit / Credit Card</span>
-                <button
-                  type="button"
-                  onClick={() => setCardEnabled(!cardEnabled)}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    cardEnabled ? 'bg-[#1f7a55]' : 'bg-stone-300'
-                  }`}
-                >
-                  <span
-                    className={`pointer-events-none inline-block size-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                      cardEnabled ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
-              </div>
-
-              <div className="flex items-center justify-between rounded-xl border border-stone-100 p-3">
-                <span className="font-semibold text-stone-800">Net Banking</span>
-                <button
-                  type="button"
-                  onClick={() => setNetBankingEnabled(!netBankingEnabled)}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    netBankingEnabled ? 'bg-[#1f7a55]' : 'bg-stone-300'
-                  }`}
-                >
-                  <span
-                    className={`pointer-events-none inline-block size-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                      netBankingEnabled ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
-              </div>
-
-            </div>
+            <p className="text-xs text-stone-600">
+              All online payments go through <b>Razorpay</b>. Customers choose UPI (Google Pay, PhonePe, Paytm), cards, net banking or wallets inside Razorpay Checkout.
+            </p>
+            <p className="text-[11px] text-stone-400">Payment methods are managed in your Razorpay dashboard.</p>
           </div>
         </div>
       </div>

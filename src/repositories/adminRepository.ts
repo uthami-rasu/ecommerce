@@ -18,6 +18,8 @@ import type {
   UpdateOrderStatusInput,
   UpdateProductInput,
   AdminProductDetail,
+  AdminVariant,
+  VariantInput,
 } from '../types/api'
 
 export const adminRepository = {
@@ -32,6 +34,10 @@ export const adminRepository = {
   deleteProduct: (id: string) => http.delete<void>(`/admin/products/${id}`),
   createProduct: (input: CreateProductInput) => http.post<any>('/admin/products', input),
   updateProduct: (id: string, input: UpdateProductInput) => http.patch<AdminProductDetail>(`/admin/products/${id}`, input),
+  addVariant: (productId: string, input: VariantInput) => http.post<AdminVariant>(`/admin/products/${productId}/variants`, input),
+  updateVariant: (productId: string, variantId: string, input: Partial<VariantInput>) =>
+    http.patch<AdminVariant>(`/admin/products/${productId}/variants/${variantId}`, input),
+  removeVariant: (productId: string, variantId: string) => http.delete<void>(`/admin/products/${productId}/variants/${variantId}`),
   uploadProductImage: (id: string, formData: FormData) => http.post<any>(`/admin/products/${id}/images`, formData),
   categories: () => http.get<{ data: CategoryRef[] }>('/categories'),
   adminCategories: (query: AdminCategoryQuery = {}) => http.get<Paginated<AdminCategoryListItem>>('/admin/categories', query),

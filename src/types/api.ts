@@ -57,6 +57,19 @@ export type CreateProductInput = {
 
 export type UpdateProductInput = Partial<Omit<CreateProductInput, 'variants'>>
 
+export type AdminVariant = {
+  id: string
+  label: string
+  sku: string
+  price: number
+  compareAtPrice: number | null
+  stock: number
+  sortOrder: number
+  isActive: boolean
+}
+
+export type VariantInput = { label: string; price: number; compareAtPrice: number | null; stock: number; sortOrder: number; isActive: boolean }
+
 export type AdminProductDetail = {
   id: string
   name: string
@@ -72,16 +85,7 @@ export type AdminProductDetail = {
   price: number
   rating: number
   reviewCount: number
-  variants: Array<{
-    id: string
-    label: string
-    sku: string
-    price: number
-    compareAtPrice: number | null
-    stock: number
-    sortOrder: number
-    isActive: boolean
-  }>
+  variants: AdminVariant[]
   images: Array<{ id: string; url: string; mediumUrl: string; thumbUrl: string; alt: string | null; sortOrder: number }>
   createdAt: string
   updatedAt: string
@@ -534,7 +538,32 @@ export type GiftPageContent = {
 }
 
 export type GiftOccasion = { id: string; name: string; slug: string; tagline: string | null; imageUrl: string | null; isFeatured: boolean }
-export type GiftPageView = { content: GiftPageContent; occasions: GiftOccasion[] }
+export type GiftDesign = {
+  hero: GiftPageContent['hero']
+  intro: { title: string; imageUrl: string | null; accentImageUrl: string | null; points: GiftPoint[] }
+  /** Exactly three: light, wine and dark themes, in this order. */
+  collections: Array<{ title: string; description: string; ctaLabel: string; productId: string | null; imageUrl: string | null }>
+  moments: { title: string; subtitle: string; items: Array<{ title: string; tagline: string; imageUrl: string | null }> }
+  pillars: { items: Array<{ title: string; body: string }> }
+  journey: { title: string; steps: Array<{ title: string; body: string }> }
+  cta: { title: string; buttonLabel: string; imageUrl: string | null }
+}
+export type GiftDesignView = Omit<GiftDesign, 'collections'> & {
+  collections: Array<GiftDesign['collections'][number] & { product: ProductSummary | null }>
+}
+/** Design text as the admin edits it: image URLs are owned by the upload endpoints. */
+export type GiftDesignInput = {
+  hero: Omit<GiftDesign['hero'], 'imageUrl'>
+  intro: Pick<GiftDesign['intro'], 'title' | 'points'>
+  collections: Array<Omit<GiftDesign['collections'][number], 'imageUrl'>>
+  moments: Omit<GiftDesign['moments'], 'items'> & { items: Array<Omit<GiftDesign['moments']['items'][number], 'imageUrl'>> }
+  pillars: GiftDesign['pillars']
+  journey: GiftDesign['journey']
+  cta: Omit<GiftDesign['cta'], 'imageUrl'>
+}
+/** hero, intro, introAccent, collection-0…2, moment-0…3 */
+export type GiftDesignSlot = string
+export type GiftPageView = { content: GiftPageContent; occasions: GiftOccasion[]; design: GiftDesignView }
 
 export type GiftEnquiryKind = 'bulk' | 'customize'
 export type GiftEnquiryInput = {
