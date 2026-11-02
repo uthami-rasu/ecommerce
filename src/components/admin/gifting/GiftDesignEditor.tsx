@@ -1,7 +1,6 @@
 import { ExternalLink, Save } from 'lucide-react'
-import { useId, useState, type FormEvent, type ReactNode } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import { toast } from 'sonner'
-import { useGetAdminProductQuery, useGetAdminProductsQuery } from '../../../features/admin/adminApi'
 import {
   useGetAdminGiftDesignQuery,
   useRemoveGiftDesignImageMutation,
@@ -10,11 +9,10 @@ import {
 } from '../../../features/gifting/giftingApi'
 import { errorMessage } from '../../../lib/http/apiClient'
 import type { GiftDesign, GiftDesignInput, GiftPoint } from '../../../types/api'
-import { formatMoney } from '../../../utils/format'
-import { btn, input, label as labelClass } from '../styles'
+import { btn } from '../styles'
 import { Card, CardHeader, ErrorState, InlineError, Skeleton, Spinner } from '../ui'
 import { IconSelect, ImageSlot, ListEditor, TextField } from './fields'
-import { GiftProductPanel } from './GiftProductPanel'
+import { GiftProductsField } from './GiftProductPanel'
 
 const THEME_NAMES = ['light background, photo left', 'wine background, photo right', 'dark background, centred']
 
@@ -31,7 +29,7 @@ const toInput = (design: GiftDesign): GiftDesignInput => ({
     whatsappMessage: design.hero.whatsappMessage,
   },
   intro: { title: design.intro.title, points: design.intro.points },
-  collections: design.collections.map(({ title, description, ctaLabel, productId }) => ({ title, description, ctaLabel, productId })),
+  collections: design.collections.map(({ title, description, ctaLabel, productIds }) => ({ title, description, ctaLabel, productIds })),
   moments: { title: design.moments.title, subtitle: design.moments.subtitle, items: design.moments.items.map(({ title, tagline }) => ({ title, tagline })) },
   pillars: design.pillars,
   journey: design.journey,
@@ -140,19 +138,19 @@ function DesignForm({ saved }: { saved: GiftDesign }) {
       </Section>
 
       {draft.collections.map((collection, index) => (
-        <Section key={index} title={`${index + 3}. Collection ${index + 1}`} description={`Shown on a ${THEME_NAMES[index]}. Pick or create the product this gift sells, then set its price and stock below.`}>
+        <Section key={index} title={`${index + 3}. Collection ${index + 1}`} description={`Shown on a ${THEME_NAMES[index]}. Add the gift products customers can choose here, and set each one's price and stock.`}>
           <div className="grid gap-4 md:grid-cols-2">
             <TextField label="Name" required value={collection.title} maxLength={80} onChange={(title) => setCollection(index, { title })} />
             <TextField label="Button label" required value={collection.ctaLabel} maxLength={30} onChange={(ctaLabel) => setCollection(index, { ctaLabel })} />
             <div className="md:col-span-2"><TextField label="Description" multiline value={collection.description} maxLength={400} onChange={(description) => setCollection(index, { description })} /></div>
-            <div className="md:col-span-2"><ProductPicker value={collection.productId} onChange={(productId) => setCollection(index, { productId })} /></div>
             <div className="md:col-span-2">
-              <GiftProductPanel
-                productId={collection.productId}
+              <GiftProductsField
+                productIds={collection.productIds}
                 collectionTitle={collection.title}
+                onChange={(productIds) => setCollection(index, { productIds })}
                 onCreated={async (productId) => {
-                  // Link and save straight away so the new product is never left unlinked.
-                  const next = { ...draft, collections: draft.collections.map((c, i) => (i === index ? { ...c, productId } : c)) }
+                  // Add and save straight away so a new product is never left out of the collection.
+                  const next = { ...draft, collections: draft.collections.map((c, i) => (i === index ? { ...c, productIds: [...c.productIds, productId] } : c)) }
                   setDraft(next)
                   await update(next).unwrap()
                 }}
@@ -224,33 +222,6 @@ function DesignForm({ saved }: { saved: GiftDesign }) {
         </div>
       </div>
     </form>
-  )
-}
-
-/** Picks the product a collection's button adds to the cart (searches the whole catalogue). */
-function ProductPicker({ value, onChange }: { value: string | null; onChange: (id: string | null) => void }) {
-  const id = useId()
-  const [search, setSearch] = useState('')
-  const { data, isFetching } = useGetAdminProductsQuery({ search: search.trim() || undefined, limit: 50, sort: 'name' })
-  const options = data?.data ?? []
-  const selected = useGetAdminProductQuery(value ?? '', { skip: !value }).data
-  return (
-    <div className="grid gap-2">
-      <label htmlFor={id} className={labelClass}>Product added to the cart *</label>
-      <div className="grid gap-2 sm:grid-cols-[1fr_1.4fr]">
-        <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search products…" aria-label="Search products" className={input} />
-        <select id={id} value={value ?? ''} onChange={(event) => onChange(event.target.value || null)} className={input}>
-          <option value="">— No product (button hidden) —</option>
-          {selected && !options.some((option) => option.id === selected.id) && <option value={selected.id}>{selected.name}</option>}
-          {options.map((product) => (
-            <option key={product.id} value={product.id}>
-              {product.name} · from {formatMoney(product.price)}{product.isActive ? '' : ' (hidden in store)'}
-            </option>
-          ))}
-        </select>
-      </div>
-      <p className="text-[11px] text-stone-500">{isFetching ? 'Searching…' : 'Create the gift product (with its photo, sizes and prices) under Products first, then pick it here.'}</p>
-    </div>
   )
 }
 

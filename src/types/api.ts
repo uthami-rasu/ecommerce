@@ -542,14 +542,15 @@ export type GiftDesign = {
   hero: GiftPageContent['hero']
   intro: { title: string; imageUrl: string | null; accentImageUrl: string | null; points: GiftPoint[] }
   /** Exactly three: light, wine and dark themes, in this order. */
-  collections: Array<{ title: string; description: string; ctaLabel: string; productId: string | null; imageUrl: string | null }>
+  /** productIds: the gifts customers choose from, in display order (empty hides the button). */
+  collections: Array<{ title: string; description: string; ctaLabel: string; productIds: string[]; imageUrl: string | null }>
   moments: { title: string; subtitle: string; items: Array<{ title: string; tagline: string; imageUrl: string | null }> }
   pillars: { items: Array<{ title: string; body: string }> }
   journey: { title: string; steps: Array<{ title: string; body: string }> }
   cta: { title: string; buttonLabel: string; imageUrl: string | null }
 }
 export type GiftDesignView = Omit<GiftDesign, 'collections'> & {
-  collections: Array<GiftDesign['collections'][number] & { product: ProductSummary | null }>
+  collections: Array<GiftDesign['collections'][number] & { products: ProductSummary[] }>
 }
 /** Design text as the admin edits it: image URLs are owned by the upload endpoints. */
 export type GiftDesignInput = {
