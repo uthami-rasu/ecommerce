@@ -143,7 +143,9 @@ function Collection({ index, collection }: { index: number; collection: Collecti
   const theme = THEMES[index] ?? THEMES[0]
   const [selectedId, setSelectedId] = useState<string | undefined>()
   const selected = collection.products.find((p) => p.id === selectedId) ?? collection.products[0] ?? null
-  const image = collection.imageUrl ?? COLLECTION_FALLBACKS[index] ?? selected?.image?.url ?? collection1
+  // The chosen gift's own main photo comes first, so changing it in admin shows here;
+  // the collection photo, then the design default, are used when the gift has no photo.
+  const image = selected?.image?.url ?? collection.imageUrl ?? COLLECTION_FALLBACKS[index] ?? collection1
   const eyebrow = `${String(index + 1).padStart(2, '0')} / Collection`
   const href = selected ? `#product/${selected.slug}` : undefined
   const photo = (

@@ -301,6 +301,10 @@ export function AdminAddProductPage() {
                 <span className="text-[11px] text-stone-400">Max 5MB per image</span>
               </div>
 
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-stone-500">Main product image (one image)</p>
+                <p className="mt-0.5 text-[11px] text-stone-400">Shown on the shop, the product page, the cart and the gift page.</p>
+              </div>
               {/* Main Image Dropzone */}
               <div className="rounded-2xl border-2 border-dashed border-indigo-200/70 bg-[#fafaff] p-5 text-center dark:border-indigo-900/50 dark:bg-indigo-950/10">
                 {mainImageUrl ? (

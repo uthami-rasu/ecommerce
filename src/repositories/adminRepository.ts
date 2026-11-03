@@ -38,6 +38,8 @@ export const adminRepository = {
   updateVariant: (productId: string, variantId: string, input: Partial<VariantInput>) =>
     http.patch<AdminVariant>(`/admin/products/${productId}/variants/${variantId}`, input),
   removeVariant: (productId: string, variantId: string) => http.delete<void>(`/admin/products/${productId}/variants/${variantId}`),
+  /** Replaces the main (first) image; the old main photo is removed. */
+  setMainProductImage: (id: string, formData: FormData) => http.put<AdminProductDetail>(`/admin/products/${id}/images/main`, formData),
   uploadProductImage: (id: string, formData: FormData) => http.post<any>(`/admin/products/${id}/images`, formData),
   categories: () => http.get<{ data: CategoryRef[] }>('/categories'),
   adminCategories: (query: AdminCategoryQuery = {}) => http.get<Paginated<AdminCategoryListItem>>('/admin/categories', query),

@@ -11,7 +11,6 @@ import {
   RotateCw,
   Save,
   Sliders,
-  Trash2,
 } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
@@ -140,15 +139,26 @@ export function AdminEditProductPage({ id }: { id: string }) {
       await updateProduct(payload).unwrap()
       await saveVariants()
 
-      // New photos are appended after the existing ones (manage order/removal per image later).
-      const photos = [mainFile, ...newViewFiles].filter((file): file is File => Boolean(file))
       let failedUploads = 0
-      for (const file of photos) {
+      // A new main image replaces the current one (it becomes image #1 everywhere).
+      if (mainFile) {
+        const formData = new FormData()
+        formData.append('image', mainFile)
+        formData.append('alt', name.trim())
+        await adminRepository.setMainProductImage(id, formData).catch(() => { failedUploads += 1 })
+      }
+      // Additional views go after the existing photos.
+      const existing = product?.images.length ?? 0
+      for (const [index, file] of newViewFiles.entries()) {
         const formData = new FormData()
         formData.append('image', file)
         formData.append('alt', name.trim())
+        formData.append('sortOrder', String(existing + index + 1))
         await uploadImage({ id, formData }).unwrap().catch(() => { failedUploads += 1 })
       }
+      dispatch(adminApi.util.invalidateTags([{ type: 'AdminProducts', id }, 'AdminProducts', 'Products', 'GiftPage', ...(product ? [{ type: 'Product' as const, id: product.slug }] : [])]))
+      setMainFile(null)
+      setNewViewFiles([])
       if (failedUploads) toast.warning(`${failedUploads} photo(s) could not be uploaded.`)
 
       toast.success(`Product "${name}" updated successfully!`)
@@ -369,6 +379,10 @@ export function AdminEditProductPage({ id }: { id: string }) {
                 <span className="text-[11px] text-stone-400">Max 5MB</span>
               </div>
 
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-stone-500">Main product image (one image)</p>
+                <p className="mt-0.5 text-[11px] text-stone-400">Shown on the shop, the product page, the cart and the gift page.</p>
+              </div>
               {/* Main Image Dropzone */}
               <div className="rounded-2xl border-2 border-dashed border-indigo-200/70 bg-[#fafaff] p-5 text-center dark:border-indigo-900/50 dark:bg-indigo-950/10">
                 {mainImageUrl ? (
@@ -388,16 +402,6 @@ export function AdminEditProductPage({ id }: { id: string }) {
                           onChange={handleImageChange}
                         />
                       </label>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setMainImageUrl('')
-                          setMainFile(null)
-                        }}
-                        className="grid size-6 place-items-center rounded-full bg-white/90 text-rose-600 shadow hover:bg-white transition-colors"
-                      >
-                        <Trash2 size={11} />
-                      </button>
                     </div>
                   </div>
                 ) : (
@@ -432,7 +436,7 @@ export function AdminEditProductPage({ id }: { id: string }) {
               {product && (
                 <div>
                   <p className="text-[11px] font-bold uppercase tracking-wider text-stone-400 mb-2.5">
-                    GALLERY VIEWS
+                    ADDITIONAL VIEWS
                   </p>
                   <div className="flex flex-wrap items-center gap-2">
                     {additionalImages.map((img, idx) => (
