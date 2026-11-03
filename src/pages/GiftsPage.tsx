@@ -1,11 +1,11 @@
 import { useState } from 'react'
-import { Check, Loader2, MessageCircle, Phone, RotateCcw, Gift, ShoppingBag } from 'lucide-react'
+import { Loader2, MessageCircle, Phone, RotateCcw, Gift, ShoppingBag } from 'lucide-react'
 import { Footer } from '../components/layout/Footer'
-import { useQuickAdd } from '../components/catalog/useQuickAdd'
+import { useCart } from '../hooks/useCart'
 import { GiftIconView } from '../components/gifts/giftIcons'
 import { useGetGiftPageQuery } from '../features/gifting/giftingApi'
 import { errorMessage } from '../lib/http/apiClient'
-import type { GiftDesignView, ProductSummary } from '../types/api'
+import type { GiftDesignView } from '../types/api'
 import { formatMoney } from '../utils/format'
 import heroFallback from '../assets/images/unsplash-dry-fruit-bowls.webp'
 import introMain from '../assets/gifting/intro-main.webp'
@@ -141,26 +141,11 @@ const THEMES = [
 
 function Collection({ index, collection }: { index: number; collection: CollectionView }) {
   const theme = THEMES[index] ?? THEMES[0]
-  const [selectedId, setSelectedId] = useState<string | undefined>()
-  const selected = collection.products.find((p) => p.id === selectedId) ?? collection.products[0] ?? null
-  // The chosen gift's own main photo comes first, so changing it in admin shows here;
-  // the collection photo, then the design default, are used when the gift has no photo.
-  const image = selected?.image?.url ?? collection.imageUrl ?? COLLECTION_FALLBACKS[index] ?? collection1
+  // Always the collection's fixed design photo.
+  const image = COLLECTION_FALLBACKS[index] ?? collection1
   const eyebrow = `${String(index + 1).padStart(2, '0')} / Collection`
-  const href = selected ? `#product/${selected.slug}` : undefined
-  const photo = (
-    <a href={href} tabIndex={href ? undefined : -1} aria-hidden={!href} className={`block overflow-hidden ${href ? '' : 'pointer-events-none'}`}>
-      <img src={image} alt={collection.title} loading="lazy" className="aspect-[3/2] w-full object-cover transition duration-700 hover:scale-[1.02]" />
-    </a>
-  )
-  const copy = (
-    <>
-      <p className={`text-[10px] font-bold uppercase tracking-[0.3em] sm:text-xs ${theme.eyebrow}`}>{eyebrow}</p>
-      <h2 className={`mt-3 font-display text-4xl font-normal leading-tight sm:text-5xl ${theme.title}`}>{collection.title}</h2>
-      {collection.description && <p className={`mt-4 max-w-md text-sm leading-relaxed sm:text-base ${theme.body}`}>{collection.description}</p>}
-      <CollectionAction products={collection.products} selected={selected} onSelect={setSelectedId} ctaLabel={collection.ctaLabel} theme={theme} centred={index === 2} />
-    </>
-  )
+  const photo = <img src={image} alt={collection.title} loading="lazy" className="aspect-[3/2] w-full object-cover" />
+  const action = <CollectionAction collection={collection} theme={theme} centred={index === 2} />
 
   if (index === 2) {
     return (
@@ -170,7 +155,7 @@ function Collection({ index, collection }: { index: number; collection: Collecti
           <h2 className={`mt-3 font-display text-4xl font-normal sm:text-6xl ${theme.title}`}>{collection.title}</h2>
           <div className="mt-10 sm:mt-14">{photo}</div>
           {collection.description && <p className={`mx-auto mt-10 max-w-xl text-sm leading-relaxed sm:text-lg ${theme.body}`}>{collection.description}</p>}
-          <div className="flex justify-center"><CollectionAction products={collection.products} selected={selected} onSelect={setSelectedId} ctaLabel={collection.ctaLabel} theme={theme} centred={index === 2} /></div>
+          {action}
         </div>
       </section>
     )
@@ -180,66 +165,62 @@ function Collection({ index, collection }: { index: number; collection: Collecti
     <section className={`${theme.section} px-5 py-16 sm:px-8 sm:py-24`}>
       <div className="mx-auto grid max-w-6xl items-center gap-10 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
         <div className={index === 1 ? 'lg:order-2' : ''}>{photo}</div>
-        <div className={index === 1 ? 'lg:order-1' : ''}>{copy}</div>
+        <div className={index === 1 ? 'lg:order-1' : ''}>
+          <p className={`text-[10px] font-bold uppercase tracking-[0.3em] sm:text-xs ${theme.eyebrow}`}>{eyebrow}</p>
+          <h2 className={`mt-3 font-display text-4xl font-normal leading-tight sm:text-5xl ${theme.title}`}>{collection.title}</h2>
+          {collection.description && <p className={`mt-4 max-w-md text-sm leading-relaxed sm:text-base ${theme.body}`}>{collection.description}</p>}
+          {action}
+        </div>
       </div>
     </section>
   )
 }
 
-/** Gift choice (when the collection offers several) + Add to cart for the chosen gift. */
-function CollectionAction({ products, selected, onSelect, ctaLabel, theme, centred }: {
-  products: ProductSummary[]
-  selected: ProductSummary | null
-  onSelect: (id: string) => void
-  ctaLabel: string
-  theme: (typeof THEMES)[number]
-  centred: boolean
-}) {
-  const { quickAdd, isAdding } = useQuickAdd()
-  // No gift linked (or all hidden in the store): the collection is shown without a button.
-  if (!selected) return null
-  const busy = isAdding(selected.id)
+/** The gift's own price + Add to cart, and (when the admin added products) what it includes. */
+function CollectionAction({ collection, theme, centred }: { collection: CollectionView; theme: (typeof THEMES)[number]; centred: boolean }) {
+  const { add } = useCart()
+  const [busy, setBusy] = useState(false)
+  const { gift, includes } = collection
+  const addGift = async () => {
+    if (!gift) return
+    setBusy(true)
+    await add({
+      product: { id: gift.productId, slug: gift.slug, name: gift.name, image: null },
+      variant: { id: gift.variantId, label: gift.variantLabel, price: gift.price, compareAtPrice: gift.compareAtPrice },
+    })
+    setBusy(false)
+  }
   return (
     <div className={`mt-8 grid gap-5 ${centred ? 'justify-items-center' : ''}`}>
-      {products.length > 1 && (
-        <div role="radiogroup" aria-label="Choose your gift" className={`flex flex-wrap gap-2 ${centred ? 'justify-center' : ''}`}>
-          {products.map((product) => {
-            const on = product.id === selected.id
-            return (
-              <button
-                key={product.id}
-                type="button"
-                role="radio"
-                aria-checked={on}
-                onClick={() => onSelect(product.id)}
-                className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-semibold transition ${on ? theme.pillOn : theme.pill}`}
-              >
-                {on && <Check size={13} aria-hidden />}
-                {product.name}
-                <span className="opacity-75">· {formatMoney(product.price)}</span>
-              </button>
-            )
-          })}
+      {includes.length > 0 && (
+        <p className={`max-w-md text-xs leading-relaxed ${theme.body} ${centred ? 'text-center' : ''}`}>
+          <span className={`mr-1 font-bold uppercase tracking-[0.18em] ${theme.eyebrow}`}>Includes</span>{' '}
+          {includes.map((product, position) => (
+            <span key={product.id}>
+              <a href={`#product/${product.slug}`} className="underline decoration-current/30 underline-offset-2 hover:decoration-current">{product.name}</a>
+              {position < includes.length - 1 ? ', ' : ''}
+            </span>
+          ))}
+        </p>
+      )}
+      {/* No price set yet (or switched off in admin): the collection is shown without a button. */}
+      {gift && (
+        <div className={`flex flex-wrap items-center gap-x-5 gap-y-3 ${centred ? 'justify-center' : ''}`}>
+          <button
+            type="button"
+            onClick={() => void addGift()}
+            disabled={busy || !gift.inStock}
+            className={`inline-flex h-12 min-w-44 items-center justify-center gap-2 px-8 text-[11px] font-bold uppercase tracking-[0.22em] transition disabled:cursor-not-allowed disabled:opacity-60 ${theme.button}`}
+          >
+            {busy ? <Loader2 size={15} className="animate-spin" aria-hidden /> : <ShoppingBag size={15} aria-hidden />}
+            {gift.inStock ? collection.ctaLabel : 'Sold out'}
+          </button>
+          <span className={`text-sm ${theme.price}`}>
+            <span className="font-semibold">{formatMoney(gift.price)}</span>
+            {gift.compareAtPrice !== null && gift.compareAtPrice > gift.price && <s className="ml-2 opacity-60">{formatMoney(gift.compareAtPrice)}</s>}
+          </span>
         </div>
       )}
-      <div className={`flex flex-wrap items-center gap-x-5 gap-y-3 ${centred ? 'justify-center' : ''}`}>
-        <button
-          type="button"
-          onClick={() => void quickAdd(selected)}
-          disabled={busy || !selected.inStock}
-          className={`inline-flex h-12 min-w-44 items-center justify-center gap-2 px-8 text-[11px] font-bold uppercase tracking-[0.22em] transition disabled:cursor-not-allowed disabled:opacity-60 ${theme.button}`}
-        >
-          {busy ? <Loader2 size={15} className="animate-spin" aria-hidden /> : <ShoppingBag size={15} aria-hidden />}
-          {selected.inStock ? ctaLabel : 'Sold out'}
-        </button>
-        <span className={`text-sm ${theme.price}`}>
-          {products.length > 1 && <span className="mr-2 opacity-75">{selected.name}</span>}
-          <span className="font-semibold">{formatMoney(selected.price)}</span>
-          {selected.compareAtPrice !== null && selected.compareAtPrice > selected.price && (
-            <s className="ml-2 opacity-60">{formatMoney(selected.compareAtPrice)}</s>
-          )}
-        </span>
-      </div>
     </div>
   )
 }

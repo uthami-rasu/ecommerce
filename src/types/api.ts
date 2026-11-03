@@ -542,21 +542,45 @@ export type GiftDesign = {
   hero: GiftPageContent['hero']
   intro: { title: string; imageUrl: string | null; accentImageUrl: string | null; points: GiftPoint[] }
   /** Exactly three: light, wine and dark themes, in this order. */
-  /** productIds: the gifts customers choose from, in display order (empty hides the button). */
-  collections: Array<{ title: string; description: string; ctaLabel: string; productIds: string[]; imageUrl: string | null }>
+  /**
+   * Each collection is one gift with the admin's own price (null = not for sale yet).
+   * includeIds: shop products listed as "Includes …" (display only). giftProductId is managed by the server.
+   */
+  collections: Array<{
+    title: string
+    description: string
+    ctaLabel: string
+    price: number | null
+    compareAtPrice: number | null
+    stock: number
+    includeIds: string[]
+    giftProductId: string | null
+    imageUrl: string | null
+  }>
   moments: { title: string; subtitle: string; items: Array<{ title: string; tagline: string; imageUrl: string | null }> }
   pillars: { items: Array<{ title: string; body: string }> }
   journey: { title: string; steps: Array<{ title: string; body: string }> }
   cta: { title: string; buttonLabel: string; imageUrl: string | null }
 }
+/** What a gift collection's Add to cart puts in the cart. */
+export type GiftOffer = {
+  productId: string
+  slug: string
+  name: string
+  variantId: string
+  variantLabel: string
+  price: number
+  compareAtPrice: number | null
+  inStock: boolean
+}
 export type GiftDesignView = Omit<GiftDesign, 'collections'> & {
-  collections: Array<GiftDesign['collections'][number] & { products: ProductSummary[] }>
+  collections: Array<GiftDesign['collections'][number] & { gift: GiftOffer | null; includes: Array<{ id: string; name: string; slug: string }> }>
 }
 /** Design text as the admin edits it: image URLs are owned by the upload endpoints. */
 export type GiftDesignInput = {
   hero: Omit<GiftDesign['hero'], 'imageUrl'>
   intro: Pick<GiftDesign['intro'], 'title' | 'points'>
-  collections: Array<Omit<GiftDesign['collections'][number], 'imageUrl'>>
+  collections: Array<Omit<GiftDesign['collections'][number], 'imageUrl' | 'giftProductId'>>
   moments: Omit<GiftDesign['moments'], 'items'> & { items: Array<Omit<GiftDesign['moments']['items'][number], 'imageUrl'>> }
   pillars: GiftDesign['pillars']
   journey: GiftDesign['journey']

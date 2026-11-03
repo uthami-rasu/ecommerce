@@ -3,16 +3,14 @@ import { useState, type FormEvent, type ReactNode } from 'react'
 import { toast } from 'sonner'
 import {
   useGetAdminGiftDesignQuery,
-  useRemoveGiftDesignImageMutation,
   useUpdateAdminGiftDesignMutation,
-  useUploadGiftDesignImageMutation,
 } from '../../../features/gifting/giftingApi'
 import { errorMessage } from '../../../lib/http/apiClient'
 import type { GiftDesign, GiftDesignInput, GiftPoint } from '../../../types/api'
 import { btn } from '../styles'
 import { Card, CardHeader, ErrorState, InlineError, Skeleton, Spinner } from '../ui'
-import { IconSelect, ImageSlot, ListEditor, TextField } from './fields'
-import { GiftProductsField } from './GiftProductPanel'
+import { IconSelect, ListEditor, TextField } from './fields'
+import { IncludedProductsField } from './GiftProductPanel'
 
 const THEME_NAMES = ['light background, photo left', 'wine background, photo right', 'dark background, centred']
 
@@ -29,7 +27,7 @@ const toInput = (design: GiftDesign): GiftDesignInput => ({
     whatsappMessage: design.hero.whatsappMessage,
   },
   intro: { title: design.intro.title, points: design.intro.points },
-  collections: design.collections.map(({ title, description, ctaLabel, productIds }) => ({ title, description, ctaLabel, productIds })),
+  collections: design.collections.map(({ title, description, ctaLabel, price, compareAtPrice, stock, includeIds }) => ({ title, description, ctaLabel, price, compareAtPrice, stock, includeIds })),
   moments: { title: design.moments.title, subtitle: design.moments.subtitle, items: design.moments.items.map(({ title, tagline }) => ({ title, tagline })) },
   pillars: design.pillars,
   journey: design.journey,
@@ -40,46 +38,14 @@ export function GiftDesignEditor() {
   const { data, isLoading, error, refetch } = useGetAdminGiftDesignQuery()
   if (isLoading) return <Card className="p-6"><Skeleton className="h-64" /></Card>
   if (!data) return <Card><ErrorState error={error} onRetry={refetch} /></Card>
-  // Keyed on the text only, so uploading a photo never resets unsaved text edits.
+  // Re-seeded from the server after each save.
   return <DesignForm key={JSON.stringify(toInput(data))} saved={data} />
 }
 
 function DesignForm({ saved }: { saved: GiftDesign }) {
   const [draft, setDraft] = useState<GiftDesignInput>(() => toInput(saved))
   const [update, { isLoading: saving, error }] = useUpdateAdminGiftDesignMutation()
-  const [upload] = useUploadGiftDesignImageMutation()
-  const [remove] = useRemoveGiftDesignImageMutation()
-  const [busySlot, setBusySlot] = useState<string | null>(null)
   const dirty = JSON.stringify(draft) !== JSON.stringify(toInput(saved))
-
-  const changeImage = async (slot: string, file: File | null) => {
-    setBusySlot(slot)
-    try {
-      if (file) {
-        const formData = new FormData()
-        formData.append('image', file)
-        await upload({ slot, formData }).unwrap()
-        toast.success('Photo updated')
-      } else {
-        await remove(slot).unwrap()
-        toast.success('Photo removed — the default photo is shown again')
-      }
-    } catch (err) {
-      toast.error('Photo not saved', { description: errorMessage(err) })
-    } finally {
-      setBusySlot(null)
-    }
-  }
-  const image = (slot: string, title: string, url: string | null) => (
-    <ImageSlot
-      label={title}
-      url={url}
-      fallbackNote="Showing the default photo from the design."
-      busy={busySlot === slot}
-      onUpload={(file) => void changeImage(slot, file)}
-      onRemove={() => void changeImage(slot, null)}
-    />
-  )
 
   const submit = async (event: FormEvent) => {
     event.preventDefault()
@@ -109,16 +75,11 @@ function DesignForm({ saved }: { saved: GiftDesign }) {
           <TextField label="WhatsApp button label" required value={draft.hero.whatsappLabel} maxLength={30} onChange={(whatsappLabel) => setHero({ whatsappLabel })} />
           <TextField label="WhatsApp number" required value={draft.hero.whatsappNumber} maxLength={15} onChange={(value) => setHero({ whatsappNumber: value.replace(/\D/g, '') })} hint="Digits with country code, e.g. 918807783007" />
           <div className="sm:col-span-2"><TextField label="WhatsApp pre-filled message" value={draft.hero.whatsappMessage} maxLength={300} onChange={(whatsappMessage) => setHero({ whatsappMessage })} /></div>
-          <div className="sm:col-span-2">{image('hero', 'Background photo', saved.hero.imageUrl)}</div>
         </div>
       </Section>
 
       <Section title="2. The Art of Thoughtful Gifting">
         <TextField label="Title" required value={draft.intro.title} maxLength={120} onChange={(title) => setDraft((d) => ({ ...d, intro: { ...d.intro, title } }))} />
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          {image('intro', 'Main photo', saved.intro.imageUrl)}
-          {image('introAccent', 'Small overlapping photo', saved.intro.accentImageUrl)}
-        </div>
         <div className="mt-4">
           <ListEditor
             items={draft.intro.points}
@@ -138,25 +99,22 @@ function DesignForm({ saved }: { saved: GiftDesign }) {
       </Section>
 
       {draft.collections.map((collection, index) => (
-        <Section key={index} title={`${index + 3}. Collection ${index + 1}`} description={`Shown on a ${THEME_NAMES[index]}. Add the gift products customers can choose here, and set each one's price and stock.`}>
+        <Section key={index} title={`${index + 3}. Collection ${index + 1}`} description={`Shown on a ${THEME_NAMES[index]}. Enter the gift's own price and stock. Adding products is optional — they're only listed as “Includes …”.`}>
           <div className="grid gap-4 md:grid-cols-2">
             <TextField label="Name" required value={collection.title} maxLength={80} onChange={(title) => setCollection(index, { title })} />
             <TextField label="Button label" required value={collection.ctaLabel} maxLength={30} onChange={(ctaLabel) => setCollection(index, { ctaLabel })} />
             <div className="md:col-span-2"><TextField label="Description" multiline value={collection.description} maxLength={400} onChange={(description) => setCollection(index, { description })} /></div>
             <div className="md:col-span-2">
-              <GiftProductsField
-                productIds={collection.productIds}
-                collectionTitle={collection.title}
-                onChange={(productIds) => setCollection(index, { productIds })}
-                onCreated={async (productId) => {
-                  // Add and save straight away so a new product is never left out of the collection.
-                  const next = { ...draft, collections: draft.collections.map((c, i) => (i === index ? { ...c, productIds: [...c.productIds, productId] } : c)) }
-                  setDraft(next)
-                  await update(next).unwrap()
-                }}
+              <GiftPriceFields
+                price={collection.price}
+                compareAtPrice={collection.compareAtPrice}
+                stock={collection.stock}
+                onChange={(patch) => setCollection(index, patch)}
               />
             </div>
-            <div className="md:col-span-2">{image(`collection-${index}`, 'Photo', saved.collections[index]?.imageUrl ?? null)}</div>
+            <div className="md:col-span-2">
+              <IncludedProductsField productIds={collection.includeIds} onChange={(includeIds) => setCollection(index, { includeIds })} />
+            </div>
           </div>
         </Section>
       ))}
@@ -174,7 +132,6 @@ function DesignForm({ saved }: { saved: GiftDesign }) {
                 <TextField label="Title" required value={item.title} maxLength={40} onChange={(title) => setMoment(index, { title })} />
                 <TextField label="Tagline" value={item.tagline} maxLength={60} onChange={(tagline) => setMoment(index, { tagline })} />
               </div>
-              {image(`moment-${index}`, 'Photo', saved.moments.items[index]?.imageUrl ?? null)}
             </div>
           ))}
         </div>
@@ -209,12 +166,11 @@ function DesignForm({ saved }: { saved: GiftDesign }) {
         <div className="grid gap-4 md:grid-cols-2">
           <TextField label="Title" required value={draft.cta.title} maxLength={120} onChange={(title) => setDraft((d) => ({ ...d, cta: { ...d.cta, title } }))} />
           <TextField label="Button label" required value={draft.cta.buttonLabel} maxLength={30} onChange={(buttonLabel) => setDraft((d) => ({ ...d, cta: { ...d.cta, buttonLabel } }))} />
-          <div className="md:col-span-2">{image('cta', 'Background photo', saved.cta.imageUrl)}</div>
         </div>
       </Section>
 
       <div className="sticky bottom-3 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white/95 p-3 shadow-lg ring-1 ring-stone-200 backdrop-blur dark:bg-stone-900/95 dark:ring-stone-800">
-        <div className="min-w-0 flex-1">{error ? <InlineError error={error} /> : <p className="px-2 text-xs text-stone-500">{dirty ? 'You have unsaved changes. Photos save on their own.' : 'All changes saved.'}</p>}</div>
+        <div className="min-w-0 flex-1">{error ? <InlineError error={error} /> : <p className="px-2 text-xs text-stone-500">{dirty ? 'You have unsaved changes.' : 'All changes saved.'}</p>}</div>
         <div className="flex gap-2">
           <a href="#gifts" target="_blank" rel="noopener" className={btn.secondary}><ExternalLink size={15} /> View page</a>
           <button type="button" className={btn.ghost} disabled={!dirty || saving} onClick={() => setDraft(toInput(saved))}>Discard</button>
@@ -222,6 +178,39 @@ function DesignForm({ saved }: { saved: GiftDesign }) {
         </div>
       </div>
     </form>
+  )
+}
+
+/** The gift's own price: customers buy the gift itself at this price. Empty price = not for sale yet. */
+function GiftPriceFields({ price, compareAtPrice, stock, onChange }: {
+  price: number | null
+  compareAtPrice: number | null
+  stock: number
+  onChange: (patch: { price?: number | null; compareAtPrice?: number | null; stock?: number }) => void
+}) {
+  const num = (value: string) => (value.trim() === '' ? null : Number(value))
+  const field = 'w-full rounded-xl border-0 bg-white px-3.5 py-2.5 text-sm text-stone-900 ring-1 ring-stone-200 focus:outline-none focus:ring-2 focus:ring-[#173f32]/60 dark:bg-stone-950 dark:text-stone-100 dark:ring-stone-700'
+  const off = price && compareAtPrice && compareAtPrice > price ? Math.round((1 - price / compareAtPrice) * 100) : 0
+  return (
+    <div className="grid gap-3 rounded-2xl bg-[#f6f1e8] p-4 dark:bg-stone-950/40">
+      <p className="text-xs font-bold uppercase tracking-wide text-stone-500">Gift price</p>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <label>
+          <span className="mb-1.5 block text-xs font-semibold text-stone-700 dark:text-stone-300">Price (₹) *</span>
+          <input type="number" min={1} step="0.01" inputMode="decimal" value={price ?? ''} placeholder="e.g. 1499" onChange={(event) => onChange({ price: num(event.target.value) })} className={field} />
+        </label>
+        <label>
+          <span className="mb-1.5 block text-xs font-semibold text-stone-700 dark:text-stone-300">MRP (₹)</span>
+          <input type="number" min={1} step="0.01" inputMode="decimal" value={compareAtPrice ?? ''} placeholder="Optional" onChange={(event) => onChange({ compareAtPrice: num(event.target.value) })} className={field} />
+          {off > 0 && <span className="mt-0.5 block text-[11px] font-semibold text-emerald-600">{off}% off</span>}
+        </label>
+        <label>
+          <span className="mb-1.5 block text-xs font-semibold text-stone-700 dark:text-stone-300">Stock *</span>
+          <input type="number" min={0} step="1" inputMode="numeric" value={stock} onChange={(event) => onChange({ stock: Math.max(0, Math.trunc(Number(event.target.value) || 0)) })} className={field} />
+        </label>
+      </div>
+      <p className="text-[11px] text-stone-500">{price ? 'Customers can add this gift to the cart at this price.' : 'Leave the price empty to hide the Add to cart button.'}</p>
+    </div>
   )
 }
 
